@@ -6,7 +6,7 @@ import { Component, input, Input, output } from "@angular/core";
   template: `
     <section class="text-center mb-8 sm:mb-12 px-2">
       <button
-        class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-lg transition-all duration-200 hover:opacity-90 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-offset-2 shadow-lg bg-primary text-background"
+        class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-lg transition-all duration-200 hover:opacity-90 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-offset-2 shadow-lg bg-primary text-primary-contrast"
         (click)="generatePalette.emit($event)"
       >
         <svg

@@ -9,6 +9,7 @@ import {
 import ColorPalette from "@services/color-palette";
 
 import ColorSwatch from "@components/color-swatch";
+import ColorScaleComponent from "@components/color-scale";
 import ExportPanel from "@components/export-panel";
 import Footer from "@components/footer";
 import Header from "@components/header";
@@ -21,6 +22,7 @@ import { hexToRgb } from "@shared/utils";
   imports: [
     ThemePreview,
     ColorSwatch,
+    ColorScaleComponent,
     ExportPanel,
     Header,
     HeroSection,
@@ -47,17 +49,39 @@ import { hexToRgb } from "@shared/utils";
             (generatePalette)="generatePalette($event)"
           />
 
+          <!-- Base Colors (Bg/Fg) -->
           <section class="mb-8 sm:mb-12">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
-              Color Palette
+              Base Colors
             </h2>
             <div
-              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl"
             >
-              @for (swatch of colorSwatches(); track swatch.cssVar) {
+              @for (swatch of baseSwatches(); track swatch.cssVar) {
               <app-color-swatch [swatch]="swatch" />
               }
             </div>
+          </section>
+
+          <!-- Color Scales -->
+          <section class="mb-8 sm:mb-12 space-y-8">
+            <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+              Color Scales
+            </h2>
+
+            <app-color-scale
+              name="Primary"
+              type="primary"
+              [scale]="primaryScale()"
+              (updateActive)="updateActiveColor('primary', $event)"
+            />
+
+            <app-color-scale
+              name="Secondary"
+              type="secondary"
+              [scale]="secondaryScale()"
+              (updateActive)="updateActiveColor('secondary', $event)"
+            />
           </section>
 
           <section class="mb-8 sm:mb-12">
@@ -82,7 +106,16 @@ export default class Home {
   overlay = viewChild<ElementRef<HTMLElement>>("overlay");
 
   isDarkMode = computed(() => this.colorService.mode() === "dark");
-  colorSwatches = computed(() => this.colorService.getColorSwatches());
+
+  // Split swatches
+  baseSwatches = computed(() => {
+    return this.colorService
+      .getColorSwatches()
+      .filter((s) => s.name === "Background" || s.name === "Foreground");
+  });
+
+  primaryScale = computed(() => this.colorService.theme().primary);
+  secondaryScale = computed(() => this.colorService.theme().secondary);
 
   constructor() {
     this.colorService.generatePalette();
@@ -95,7 +128,7 @@ export default class Home {
     this.colorService.generatePalette();
     this.colorService.updateCSSVariables();
     this.overlay()!.nativeElement.style.background = `rgba(${hexToRgb(
-      this.colorService.theme().primary
+      this.colorService.theme().primary.DEFAULT
     )} / 0.2)`;
 
     this.root.classList.add("theme-generate-animating");
@@ -120,5 +153,9 @@ export default class Home {
 
       this.colorService.updateCSSVariables();
     }, 150);
+  }
+
+  updateActiveColor(type: "primary" | "secondary", shade: string): void {
+    this.colorService.updateActiveShade(type, shade);
   }
 }

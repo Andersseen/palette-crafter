@@ -113,3 +113,66 @@ export const calculateContrast = (color1: string, color2: string): number => {
   const darkest = Math.min(lum1, lum2);
   return (brightest + 0.05) / (darkest + 0.05);
 };
+
+export const generateColorScale = (
+  hex: string
+): import("./types").ColorScale => {
+  const hsl = hexToHsl(hex);
+
+  // We keep hue and saturation (mostly) constant, varying lightness
+  const shades: Record<string, string> = {
+    50: hslToHex(hsl.h, hsl.s, 95),
+    100: hslToHex(hsl.h, hsl.s, 90),
+    200: hslToHex(hsl.h, hsl.s, 80),
+    300: hslToHex(hsl.h, hsl.s, 70),
+    400: hslToHex(hsl.h, hsl.s, 60),
+    500: hslToHex(hsl.h, hsl.s, 50),
+    600: hslToHex(hsl.h, hsl.s, 40),
+    700: hslToHex(hsl.h, hsl.s, 30),
+    800: hslToHex(hsl.h, hsl.s, 20),
+    900: hslToHex(hsl.h, hsl.s, 10),
+    950: hslToHex(hsl.h, hsl.s, 5),
+  };
+
+  // Determine best contrasting foreground for the DEFAULT color (which we set to 500)
+  // But actually, we should probably set DEFAULT to the input color if possible,
+  // or maybe just stick to a consistent scale where 500 is "standard".
+  // Let's make 500 the base, or closest to input.
+  // For this "best practice" request, mapping input to 500 is standard for palette generators.
+
+  // Let's refine: The input hex is the "base" color.
+  // We should try to place the base color at 500 if it's vibrant, or elsewhere if dark/light.
+  // But for "palette generation" from scratch (random), we generate a color for 500.
+  // If we assume this function is used by the generator which creates a base color, we can assume hex is the 'primary' middle.
+
+  // Recalculating 500 to Ensure it matches input exactly?
+  // Or just trusting the lightness variation?
+  // Let's stick to standard lightness curves for consistency.
+  // But we want the "primary" color of the theme to be the one we generated.
+
+  // Overwrite 500 with input? No, if input lightness is 90, it shouldn't be 500.
+  // Since we are GENERATING the palette in the service, we will pass a generated base color (standard lightness).
+  // So we can assume the input hex has reasonable lightness for a 'primary' color (approx 50%).
+
+  // Let's assume input is roughly intended for the 500 slot or DEFAULT.
+
+  const defaultShade = shades[500];
+  const fgForDefault =
+    calculateContrast(defaultShade, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
+
+  return {
+    50: shades[50],
+    100: shades[100],
+    200: shades[200],
+    300: shades[300],
+    400: shades[400],
+    500: shades[500],
+    600: shades[600],
+    700: shades[700],
+    800: shades[800],
+    900: shades[900],
+    950: shades[950],
+    DEFAULT: defaultShade,
+    foreground: fgForDefault,
+  };
+};

@@ -9,7 +9,7 @@ import ColorPalette from "@services/color-palette";
 
       <div class="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
         <button
-          class="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-primary text-background focus:ring-primary"
+          class="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-primary text-primary-contrast focus:ring-primary"
           (click)="copyTailwindConfig()"
         >
           {{ buttonText() }}
