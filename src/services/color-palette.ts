@@ -12,6 +12,7 @@ import {
   hexToOklab,
   hexToRgb,
   hslToHex,
+  generateColorScale,
 } from "@shared/utils";
 
 @Injectable()
@@ -19,8 +20,8 @@ export default class ColorPalette {
   private currentTheme = signal<Theme>({
     bg: "#ffffff",
     fg: "#1a1a1a",
-    primary: "#3b82f6",
-    secondary: "#10b981",
+    primary: generateColorScale("#3b82f6"),
+    secondary: generateColorScale("#10b981"),
   });
 
   private themeMode = signal<ThemeMode>("light");
@@ -48,39 +49,46 @@ export default class ColorPalette {
    * Generates a harmonious color palette using HSL color theory
    */
   generatePalette(): void {
-    // Generate base hue (0-360)
     const baseHue = Math.floor(Math.random() * 360);
+    const harmonyType = Math.random();
 
-    // Create complementary and triadic colors for harmony
-    const primaryHue = baseHue;
-    const secondaryHue = (baseHue + 120) % 360; // Triadic harmony
+    let secondaryHue: number;
+
+    if (harmonyType < 0.25) {
+      // Analogous
+      secondaryHue = (baseHue + 30) % 360;
+    } else if (harmonyType < 0.5) {
+      // Complementary
+      secondaryHue = (baseHue + 180) % 360;
+    } else if (harmonyType < 0.75) {
+      // Split Complementary
+      secondaryHue = (baseHue + 150) % 360;
+    } else {
+      // Triadic
+      secondaryHue = (baseHue + 120) % 360;
+    }
 
     let bgColor: string;
     let fgColor: string;
-    let primaryColor: string;
-    let secondaryColor: string;
-    console.log(this.themeMode());
+    let primaryBase: string;
+    let secondaryBase: string;
 
     if (this.themeMode() === "light") {
-      // Light mode: light background, dark text
-      bgColor = hslToHex(baseHue, 10, 98); // Very light, subtle hue
-      fgColor = hslToHex(baseHue, 20, 15); // Very dark with slight hue tint
-      primaryColor = hslToHex(primaryHue, 70, 50);
-      secondaryColor = hslToHex(secondaryHue, 65, 45);
+      bgColor = hslToHex(baseHue, 10, 98);
+      fgColor = hslToHex(baseHue, 20, 10);
+      primaryBase = hslToHex(baseHue, 70, 50);
+      secondaryBase = hslToHex(secondaryHue, 65, 45);
 
-      // Ensure WCAG AA contrast (4.5:1 minimum)
       while (calculateContrast(bgColor, fgColor) < 4.5) {
         const fgHsl = hexToHsl(fgColor);
         fgColor = hslToHex(fgHsl.h, fgHsl.s, Math.max(fgHsl.l - 5, 0));
       }
     } else {
-      // Dark mode: dark background, light text
-      bgColor = hslToHex(baseHue, 20, 8); // Very dark with subtle hue
-      fgColor = hslToHex(baseHue, 15, 95); // Very light with slight hue tint
-      primaryColor = hslToHex(primaryHue, 60, 65);
-      secondaryColor = hslToHex(secondaryHue, 55, 60);
+      bgColor = hslToHex(baseHue, 20, 8);
+      fgColor = hslToHex(baseHue, 15, 95);
+      primaryBase = hslToHex(baseHue, 60, 60);
+      secondaryBase = hslToHex(secondaryHue, 55, 60);
 
-      // Ensure WCAG AA contrast
       while (calculateContrast(bgColor, fgColor) < 4.5) {
         const fgHsl = hexToHsl(fgColor);
         fgColor = hslToHex(fgHsl.h, fgHsl.s, Math.min(fgHsl.l + 5, 100));
@@ -90,11 +98,9 @@ export default class ColorPalette {
     this.currentTheme.set({
       bg: bgColor,
       fg: fgColor,
-      primary: primaryColor,
-      secondary: secondaryColor,
+      primary: generateColorScale(primaryBase),
+      secondary: generateColorScale(secondaryBase),
     });
-
-    // this.updateCSSVariables();
   }
 
   /**
@@ -111,7 +117,6 @@ export default class ColorPalette {
   setThemeMode(mode: ThemeMode): void {
     this.themeMode.set(mode);
     document.documentElement.classList.toggle("dark", mode === "dark");
-    // this.generatePalette();
   }
 
   /**
@@ -123,8 +128,28 @@ export default class ColorPalette {
 
     root.style.setProperty("--bg", hexToRgb(theme.bg));
     root.style.setProperty("--fg", hexToRgb(theme.fg));
-    root.style.setProperty("--primary", hexToRgb(theme.primary));
-    root.style.setProperty("--secondary", hexToRgb(theme.secondary));
+
+    // Update Primary Scale
+    Object.entries(theme.primary).forEach(([key, value]) => {
+      if (key === "DEFAULT") {
+        root.style.setProperty("--primary", hexToRgb(value));
+      } else if (key === "foreground") {
+        root.style.setProperty("--primary-foreground", hexToRgb(value));
+      } else {
+        root.style.setProperty(`--primary-${key}`, hexToRgb(value));
+      }
+    });
+
+    // Update Secondary Scale
+    Object.entries(theme.secondary).forEach(([key, value]) => {
+      if (key === "DEFAULT") {
+        root.style.setProperty("--secondary", hexToRgb(value));
+      } else if (key === "foreground") {
+        root.style.setProperty("--secondary-foreground", hexToRgb(value));
+      } else {
+        root.style.setProperty(`--secondary-${key}`, hexToRgb(value));
+      }
+    });
   }
 
   /**
@@ -149,16 +174,16 @@ export default class ColorPalette {
       },
       {
         name: "Primary",
-        hex: theme.primary,
-        hsl: this.formatHSL(hexToHsl(theme.primary)),
-        oklab: this.formatOklab(hexToOklab(theme.primary)),
+        hex: theme.primary.DEFAULT,
+        hsl: this.formatHSL(hexToHsl(theme.primary.DEFAULT)),
+        oklab: this.formatOklab(hexToOklab(theme.primary.DEFAULT)),
         cssVar: "--primary",
       },
       {
         name: "Secondary",
-        hex: theme.secondary,
-        hsl: this.formatHSL(hexToHsl(theme.secondary)),
-        oklab: this.formatOklab(hexToOklab(theme.secondary)),
+        hex: theme.secondary.DEFAULT,
+        hsl: this.formatHSL(hexToHsl(theme.secondary.DEFAULT)),
+        oklab: this.formatOklab(hexToOklab(theme.secondary.DEFAULT)),
         cssVar: "--secondary",
       },
     ];
@@ -188,8 +213,34 @@ export default class ColorPalette {
  @theme {
   --color-background: rgb(var(--bg));
   --color-foreground: rgb(var(--fg));
+  
   --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-primary-50: rgb(var(--primary-50));
+  --color-primary-100: rgb(var(--primary-100));
+  --color-primary-200: rgb(var(--primary-200));
+  --color-primary-300: rgb(var(--primary-300));
+  --color-primary-400: rgb(var(--primary-400));
+  --color-primary-500: rgb(var(--primary-500));
+  --color-primary-600: rgb(var(--primary-600));
+  --color-primary-700: rgb(var(--primary-700));
+  --color-primary-800: rgb(var(--primary-800));
+  --color-primary-900: rgb(var(--primary-900));
+  --color-primary-950: rgb(var(--primary-950));
+
   --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-secondary-50: rgb(var(--secondary-50));
+  --color-secondary-100: rgb(var(--secondary-100));
+  --color-secondary-200: rgb(var(--secondary-200));
+  --color-secondary-300: rgb(var(--secondary-300));
+  --color-secondary-400: rgb(var(--secondary-400));
+  --color-secondary-500: rgb(var(--secondary-500));
+  --color-secondary-600: rgb(var(--secondary-600));
+  --color-secondary-700: rgb(var(--secondary-700));
+  --color-secondary-800: rgb(var(--secondary-800));
+  --color-secondary-900: rgb(var(--secondary-900));
+  --color-secondary-950: rgb(var(--secondary-950));
 }
   }`;
   }
