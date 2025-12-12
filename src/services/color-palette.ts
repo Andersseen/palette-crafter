@@ -129,27 +129,35 @@ export default class ColorPalette {
     root.style.setProperty("--bg", hexToRgb(theme.bg));
     root.style.setProperty("--fg", hexToRgb(theme.fg));
 
-    // Update Primary Scale
-    Object.entries(theme.primary).forEach(([key, value]) => {
-      if (key === "DEFAULT") {
-        root.style.setProperty("--primary", hexToRgb(value));
-      } else if (key === "foreground") {
-        root.style.setProperty("--primary-foreground", hexToRgb(value));
-      } else {
-        root.style.setProperty(`--primary-${key}`, hexToRgb(value));
-      }
-    });
+    // Helper to set color and contrast
+    const setScaleVars = (name: string, scale: any) => {
+      // Set DEFAULT and its contrast
+      root.style.setProperty(`--${name}`, hexToRgb(scale.DEFAULT));
+      const defaultContrast =
+        calculateContrast(scale.DEFAULT, "#ffffff") >= 4.5
+          ? "#ffffff"
+          : "#000000";
+      root.style.setProperty(`--${name}-contrast`, hexToRgb(defaultContrast));
 
-    // Update Secondary Scale
-    Object.entries(theme.secondary).forEach(([key, value]) => {
-      if (key === "DEFAULT") {
-        root.style.setProperty("--secondary", hexToRgb(value));
-      } else if (key === "foreground") {
-        root.style.setProperty("--secondary-foreground", hexToRgb(value));
-      } else {
-        root.style.setProperty(`--secondary-${key}`, hexToRgb(value));
-      }
-    });
+      // Iterating through all shades 50-950
+      Object.keys(scale).forEach((key) => {
+        if (key !== "DEFAULT" && key !== "foreground") {
+          const hex = scale[key];
+          root.style.setProperty(`--${name}-${key}`, hexToRgb(hex));
+
+          // Calculate and set contrast for this specific shade
+          const contrast =
+            calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
+          root.style.setProperty(
+            `--${name}-${key}-contrast`,
+            hexToRgb(contrast)
+          );
+        }
+      });
+    };
+
+    setScaleVars("primary", theme.primary);
+    setScaleVars("secondary", theme.secondary);
   }
 
   /**

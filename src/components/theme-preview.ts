@@ -28,13 +28,13 @@ import { Component } from "@angular/core";
           class="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 items-stretch sm:items-center"
         >
           <button
-            class="w-full sm:w-auto px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-primary focus:ring-primary text-background"
+            class="w-full sm:w-auto px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-primary focus:ring-primary text-primary-contrast"
           >
             Primary Action
           </button>
 
           <button
-            class="w-full sm:w-auto px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-secondary focus:ring-primary text-background"
+            class="w-full sm:w-auto px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-secondary focus:ring-primary text-secondary-contrast"
           >
             Secondary Action
           </button>

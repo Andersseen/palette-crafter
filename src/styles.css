@@ -15,8 +15,56 @@
 @theme {
   --color-background: rgb(var(--bg));
   --color-foreground: rgb(var(--fg));
+
   --color-primary: rgb(var(--primary));
+  --color-primary-contrast: rgb(var(--primary-contrast));
+  --color-primary-50: rgb(var(--primary-50));
+  --color-primary-50-contrast: rgb(var(--primary-50-contrast));
+  --color-primary-100: rgb(var(--primary-100));
+  --color-primary-100-contrast: rgb(var(--primary-100-contrast));
+  --color-primary-200: rgb(var(--primary-200));
+  --color-primary-200-contrast: rgb(var(--primary-200-contrast));
+  --color-primary-300: rgb(var(--primary-300));
+  --color-primary-300-contrast: rgb(var(--primary-300-contrast));
+  --color-primary-400: rgb(var(--primary-400));
+  --color-primary-400-contrast: rgb(var(--primary-400-contrast));
+  --color-primary-500: rgb(var(--primary-500));
+  --color-primary-500-contrast: rgb(var(--primary-500-contrast));
+  --color-primary-600: rgb(var(--primary-600));
+  --color-primary-600-contrast: rgb(var(--primary-600-contrast));
+  --color-primary-700: rgb(var(--primary-700));
+  --color-primary-700-contrast: rgb(var(--primary-700-contrast));
+  --color-primary-800: rgb(var(--primary-800));
+  --color-primary-800-contrast: rgb(var(--primary-800-contrast));
+  --color-primary-900: rgb(var(--primary-900));
+  --color-primary-900-contrast: rgb(var(--primary-900-contrast));
+  --color-primary-950: rgb(var(--primary-950));
+  --color-primary-950-contrast: rgb(var(--primary-950-contrast));
+
   --color-secondary: rgb(var(--secondary));
+  --color-secondary-contrast: rgb(var(--secondary-contrast));
+  --color-secondary-50: rgb(var(--secondary-50));
+  --color-secondary-50-contrast: rgb(var(--secondary-50-contrast));
+  --color-secondary-100: rgb(var(--secondary-100));
+  --color-secondary-100-contrast: rgb(var(--secondary-100-contrast));
+  --color-secondary-200: rgb(var(--secondary-200));
+  --color-secondary-200-contrast: rgb(var(--secondary-200-contrast));
+  --color-secondary-300: rgb(var(--secondary-300));
+  --color-secondary-300-contrast: rgb(var(--secondary-300-contrast));
+  --color-secondary-400: rgb(var(--secondary-400));
+  --color-secondary-400-contrast: rgb(var(--secondary-400-contrast));
+  --color-secondary-500: rgb(var(--secondary-500));
+  --color-secondary-500-contrast: rgb(var(--secondary-500-contrast));
+  --color-secondary-600: rgb(var(--secondary-600));
+  --color-secondary-600-contrast: rgb(var(--secondary-600-contrast));
+  --color-secondary-700: rgb(var(--secondary-700));
+  --color-secondary-700-contrast: rgb(var(--secondary-700-contrast));
+  --color-secondary-800: rgb(var(--secondary-800));
+  --color-secondary-800-contrast: rgb(var(--secondary-800-contrast));
+  --color-secondary-900: rgb(var(--secondary-900));
+  --color-secondary-900-contrast: rgb(var(--secondary-900-contrast));
+  --color-secondary-950: rgb(var(--secondary-950));
+  --color-secondary-950-contrast: rgb(var(--secondary-950-contrast));
 }
 
 /* @layer base {
