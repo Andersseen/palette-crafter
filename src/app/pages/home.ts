@@ -69,9 +69,19 @@ import { hexToRgb } from "@shared/utils";
               Color Scales
             </h2>
 
-            <app-color-scale name="Primary" [scale]="primaryScale()" />
+            <app-color-scale
+              name="Primary"
+              type="primary"
+              [scale]="primaryScale()"
+              (updateActive)="updateActiveColor('primary', $event)"
+            />
 
-            <app-color-scale name="Secondary" [scale]="secondaryScale()" />
+            <app-color-scale
+              name="Secondary"
+              type="secondary"
+              [scale]="secondaryScale()"
+              (updateActive)="updateActiveColor('secondary', $event)"
+            />
           </section>
 
           <section class="mb-8 sm:mb-12">
@@ -143,5 +153,9 @@ export default class Home {
 
       this.colorService.updateCSSVariables();
     }, 150);
+  }
+
+  updateActiveColor(type: "primary" | "secondary", shade: string): void {
+    this.colorService.updateActiveShade(type, shade);
   }
 }

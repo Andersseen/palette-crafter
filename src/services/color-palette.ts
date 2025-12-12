@@ -153,6 +153,25 @@ export default class ColorPalette {
   }
 
   /**
+   * Updates the active shade (DEFAULT) for a specific color scale
+   */
+  updateActiveShade(type: "primary" | "secondary", shadeValue: string): void {
+    const currentTheme = this.currentTheme();
+    const targetScale =
+      type === "primary" ? currentTheme.primary : currentTheme.secondary;
+
+    // Create new scale object with updated DEFAULT
+    const newScale = { ...targetScale, DEFAULT: shadeValue };
+
+    this.currentTheme.set({
+      ...currentTheme,
+      [type]: newScale,
+    });
+
+    this.updateCSSVariables();
+  }
+
+  /**
    * Gets color swatches for display
    */
   getColorSwatches(): ColorSwatchType[] {
