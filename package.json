@@ -31,11 +31,17 @@
   "homepage": "https://palette-crafter-psi.vercel.app",
   "scripts": {
     "ng": "ng",
+    "dev": "ng serve",
     "start": "ng serve",
     "build": "ng build",
-    "serve:ssr": "node dist/palette-crafter/server/server.mjs"
+    "serve:ssr": "pnpm dev:cf",
+    "build:cf": "BUILD_PRESET=cloudflare-pages ng build",
+    "dev:cf": "pnpm build:cf && wrangler pages dev",
+    "deploy:cf": "pnpm build:cf && wrangler pages deploy"
   },
   "dependencies": {
+    "@analogjs/content": "^2.3.1",
+    "@analogjs/router": "^2.3.1",
     "@angular/animations": "^21.2.3",
     "@angular/common": "^21.2.3",
     "@angular/compiler": "^21.2.3",
@@ -47,18 +53,32 @@
     "@angular/ssr": "^21.2.3",
     "@tailwindcss/postcss": "^4.1.11",
     "autoprefixer": "^10.4.21",
-    "express": "^5.1.0",
+    "marked": "^15.0.7",
+    "marked-gfm-heading-id": "^4.1.1",
+    "marked-highlight": "^2.2.1",
+    "marked-mangle": "^1.1.10",
     "postcss": "^8.5.6",
+    "prismjs": "^1.29.0",
     "rxjs": "^7.8.1",
     "tailwindcss": "^4.1.11",
     "tslib": "^2.5.0"
   },
   "devDependencies": {
+    "@analogjs/platform": "^2.3.1",
+    "@analogjs/vite-plugin-angular": "^2.3.1",
+    "@analogjs/vitest-angular": "^2.3.1",
     "@angular/build": "^21.2.3",
     "@angular/cli": "^21.2.3",
     "@angular/compiler-cli": "^21.2.3",
-    "@types/express": "^5.0.1",
+    "@nx/devkit": "^22.6.1",
+    "@nx/vite": "^22.0.0",
     "@types/node": "^22.15.30",
-    "typescript": "^5.9.3"
-  }
+    "jsdom": "^22.0.0",
+    "nx": "^22.6.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0",
+    "vite-tsconfig-paths": "^4.2.0",
+    "wrangler": "^4.76.0"
+  },
+  "type": "module"
 }

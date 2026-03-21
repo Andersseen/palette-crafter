@@ -3,19 +3,18 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from "@angular/core";
-import { provideRouter } from "@angular/router";
-
-import { routes } from "./routes";
+import { withNavigationErrorHandler } from "@angular/router";
 import {
   provideClientHydration,
   withEventReplay,
 } from "@angular/platform-browser";
+import { provideFileRouter } from "@analogjs/router";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideFileRouter(withNavigationErrorHandler(console.error)),
     provideClientHydration(withEventReplay()),
   ],
 };
