@@ -28,7 +28,6 @@ import { hexToRgb } from "@shared/utils";
     HeroSection,
     Footer,
   ],
-  providers: [ColorPalette],
   template: `
     <section
       class="relative isolate min-h-screen overflow-x-hidden bg-background text-foreground"
@@ -58,7 +57,7 @@ import { hexToRgb } from "@shared/utils";
               class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl"
             >
               @for (swatch of baseSwatches(); track swatch.cssVar) {
-              <app-color-swatch [swatch]="swatch" />
+                <app-color-swatch [swatch]="swatch" />
               }
             </div>
           </section>
@@ -128,7 +127,7 @@ export default class Home {
     this.colorService.generatePalette();
     this.colorService.updateCSSVariables();
     this.overlay()!.nativeElement.style.background = `rgba(${hexToRgb(
-      this.colorService.theme().primary.DEFAULT
+      this.colorService.theme().primary.DEFAULT,
     )} / 0.2)`;
 
     this.root.classList.add("theme-generate-animating");
@@ -144,7 +143,7 @@ export default class Home {
     this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
 
     this.overlay()!.nativeElement.style.background = `rgb(${hexToRgb(
-      this.colorService.theme().bg
+      this.colorService.theme().bg,
     )})`;
 
     this.root.classList.add("theme-animating");

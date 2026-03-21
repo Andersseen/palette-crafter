@@ -1,4 +1,11 @@
-import { Injectable, signal, computed } from "@angular/core";
+import { DOCUMENT, isPlatformBrowser } from "@angular/common";
+import {
+  Injectable,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+} from "@angular/core";
 import type {
   Theme,
   HSLColor,
@@ -11,12 +18,15 @@ import {
   hexToHsl,
   hexToOklab,
   hexToRgb,
-  hslToHex,
   generateColorScale,
 } from "@shared/utils";
+import { generateTheme } from "@shared/theme-generator";
 
-@Injectable()
+@Injectable({ providedIn: "root" })
 export default class ColorPalette {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly document = inject(DOCUMENT);
+
   private currentTheme = signal<Theme>({
     bg: "#ffffff",
     fg: "#1a1a1a",
@@ -31,9 +41,13 @@ export default class ColorPalette {
   mode = computed(() => this.themeMode());
 
   constructor() {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     // Auto-detect system preference
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      "(prefers-color-scheme: dark)",
     ).matches;
     this.setThemeMode(prefersDark ? "dark" : "light");
 
@@ -49,58 +63,8 @@ export default class ColorPalette {
    * Generates a harmonious color palette using HSL color theory
    */
   generatePalette(): void {
-    const baseHue = Math.floor(Math.random() * 360);
-    const harmonyType = Math.random();
-
-    let secondaryHue: number;
-
-    if (harmonyType < 0.25) {
-      // Analogous
-      secondaryHue = (baseHue + 30) % 360;
-    } else if (harmonyType < 0.5) {
-      // Complementary
-      secondaryHue = (baseHue + 180) % 360;
-    } else if (harmonyType < 0.75) {
-      // Split Complementary
-      secondaryHue = (baseHue + 150) % 360;
-    } else {
-      // Triadic
-      secondaryHue = (baseHue + 120) % 360;
-    }
-
-    let bgColor: string;
-    let fgColor: string;
-    let primaryBase: string;
-    let secondaryBase: string;
-
-    if (this.themeMode() === "light") {
-      bgColor = hslToHex(baseHue, 10, 98);
-      fgColor = hslToHex(baseHue, 20, 10);
-      primaryBase = hslToHex(baseHue, 70, 50);
-      secondaryBase = hslToHex(secondaryHue, 65, 45);
-
-      while (calculateContrast(bgColor, fgColor) < 4.5) {
-        const fgHsl = hexToHsl(fgColor);
-        fgColor = hslToHex(fgHsl.h, fgHsl.s, Math.max(fgHsl.l - 5, 0));
-      }
-    } else {
-      bgColor = hslToHex(baseHue, 20, 8);
-      fgColor = hslToHex(baseHue, 15, 95);
-      primaryBase = hslToHex(baseHue, 60, 60);
-      secondaryBase = hslToHex(secondaryHue, 55, 60);
-
-      while (calculateContrast(bgColor, fgColor) < 4.5) {
-        const fgHsl = hexToHsl(fgColor);
-        fgColor = hslToHex(fgHsl.h, fgHsl.s, Math.min(fgHsl.l + 5, 100));
-      }
-    }
-
-    this.currentTheme.set({
-      bg: bgColor,
-      fg: fgColor,
-      primary: generateColorScale(primaryBase),
-      secondary: generateColorScale(secondaryBase),
-    });
+    const { theme } = generateTheme({ mode: this.themeMode() });
+    this.currentTheme.set(theme);
   }
 
   /**
@@ -116,15 +80,24 @@ export default class ColorPalette {
    */
   setThemeMode(mode: ThemeMode): void {
     this.themeMode.set(mode);
-    document.documentElement.classList.toggle("dark", mode === "dark");
+
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.document.documentElement.classList.toggle("dark", mode === "dark");
   }
 
   /**
    * Updates CSS custom properties with current theme
    */
   updateCSSVariables(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     const theme = this.currentTheme();
-    const root = document.documentElement;
+    const root = this.document.documentElement;
 
     root.style.setProperty("--bg", hexToRgb(theme.bg));
     root.style.setProperty("--fg", hexToRgb(theme.fg));
@@ -150,7 +123,7 @@ export default class ColorPalette {
             calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
           root.style.setProperty(
             `--${name}-${key}-contrast`,
-            hexToRgb(contrast)
+            hexToRgb(contrast),
           );
         }
       });
@@ -228,7 +201,7 @@ export default class ColorPalette {
    */
   private formatOklab(oklab: OklabColor): string {
     return `oklab(${oklab.l.toFixed(3)} ${oklab.a.toFixed(3)} ${oklab.b.toFixed(
-      3
+      3,
     )})`;
   }
 
