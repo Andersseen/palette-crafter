@@ -18,9 +18,9 @@ import {
   hexToHsl,
   hexToOklab,
   hexToRgb,
-  hslToHex,
   generateColorScale,
 } from "@shared/utils";
+import { generateTheme } from "@shared/theme-generator";
 
 @Injectable({ providedIn: "root" })
 export default class ColorPalette {
@@ -63,58 +63,8 @@ export default class ColorPalette {
    * Generates a harmonious color palette using HSL color theory
    */
   generatePalette(): void {
-    const baseHue = Math.floor(Math.random() * 360);
-    const harmonyType = Math.random();
-
-    let secondaryHue: number;
-
-    if (harmonyType < 0.25) {
-      // Analogous
-      secondaryHue = (baseHue + 30) % 360;
-    } else if (harmonyType < 0.5) {
-      // Complementary
-      secondaryHue = (baseHue + 180) % 360;
-    } else if (harmonyType < 0.75) {
-      // Split Complementary
-      secondaryHue = (baseHue + 150) % 360;
-    } else {
-      // Triadic
-      secondaryHue = (baseHue + 120) % 360;
-    }
-
-    let bgColor: string;
-    let fgColor: string;
-    let primaryBase: string;
-    let secondaryBase: string;
-
-    if (this.themeMode() === "light") {
-      bgColor = hslToHex(baseHue, 10, 98);
-      fgColor = hslToHex(baseHue, 20, 10);
-      primaryBase = hslToHex(baseHue, 70, 50);
-      secondaryBase = hslToHex(secondaryHue, 65, 45);
-
-      while (calculateContrast(bgColor, fgColor) < 4.5) {
-        const fgHsl = hexToHsl(fgColor);
-        fgColor = hslToHex(fgHsl.h, fgHsl.s, Math.max(fgHsl.l - 5, 0));
-      }
-    } else {
-      bgColor = hslToHex(baseHue, 20, 8);
-      fgColor = hslToHex(baseHue, 15, 95);
-      primaryBase = hslToHex(baseHue, 60, 60);
-      secondaryBase = hslToHex(secondaryHue, 55, 60);
-
-      while (calculateContrast(bgColor, fgColor) < 4.5) {
-        const fgHsl = hexToHsl(fgColor);
-        fgColor = hslToHex(fgHsl.h, fgHsl.s, Math.min(fgHsl.l + 5, 100));
-      }
-    }
-
-    this.currentTheme.set({
-      bg: bgColor,
-      fg: fgColor,
-      primary: generateColorScale(primaryBase),
-      secondary: generateColorScale(secondaryBase),
-    });
+    const { theme } = generateTheme({ mode: this.themeMode() });
+    this.currentTheme.set(theme);
   }
 
   /**

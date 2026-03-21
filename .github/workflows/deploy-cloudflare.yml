@@ -47,6 +47,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
           command: pages deploy
-
-      - name: Show deployment URL
-        run: echo "${{ steps.deploy.outputs.deployment-url }}"
