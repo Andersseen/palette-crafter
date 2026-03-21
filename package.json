@@ -31,6 +31,7 @@
   "homepage": "https://palette-crafter-psi.vercel.app",
   "scripts": {
     "dev": "ng serve",
+    "start": "pnpm dev",
     "clean": "rm -rf dist .angular/cache",
     "build": "ng build",
     "build:cf": "BUILD_PRESET=cloudflare-pages ng build",
@@ -54,6 +55,7 @@
     "marked-gfm-heading-id": "^4.1.1",
     "marked-highlight": "^2.2.1",
     "marked-mangle": "^1.1.10",
+    "h3": "^1.15.4",
     "postcss": "^8.5.6",
     "prismjs": "^1.29.0",
     "rxjs": "^7.8.1",

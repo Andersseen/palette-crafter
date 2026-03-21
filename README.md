@@ -61,6 +61,41 @@ Base path:
 
 - `/api/v1/theme`
 
+### How to Use the API Quickly
+
+1. Start the app:
+
+```bash
+pnpm dev
+```
+
+2. Test a basic request:
+
+```bash
+curl -s "http://localhost:4200/api/v1/theme"
+```
+
+3. Test deterministic generation (same input => same output):
+
+```bash
+curl -s "http://localhost:4200/api/v1/theme?mode=dark&seed=brand-a&harmony=triadic&baseHue=220"
+```
+
+4. Test POST payload:
+
+```bash
+curl -sS -X POST "http://localhost:4200/api/v1/theme" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"light","seed":"landing-v1","harmony":"complementary","baseHue":210}'
+```
+
+5. Test validation errors (`400`):
+
+```bash
+curl -i "http://localhost:4200/api/v1/theme?mode=invalid"
+curl -i "http://localhost:4200/api/v1/theme?baseHue=999"
+```
+
 Supported methods:
 
 - `GET`

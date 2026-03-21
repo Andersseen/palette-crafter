@@ -4,6 +4,7 @@ import {
   getQuery,
   readBody,
   createError,
+  type H3Event,
 } from "h3";
 import {
   generateTheme,
@@ -78,7 +79,7 @@ const normalizePayload = (payload: ThemeRequest): ThemeGenerationOptions => {
   };
 };
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
   const method = getMethod(event).toUpperCase();
 
   if (method !== "GET" && method !== "POST") {
@@ -92,10 +93,10 @@ export default defineEventHandler(async (event) => {
   const body = method === "POST" ? await readBody<ThemeRequest>(event) : {};
 
   const payload: ThemeRequest = {
-    mode: (body?.mode ?? query.mode) as ThemeMode | undefined,
-    seed: body?.seed ?? (query.seed as string | undefined),
-    baseHue: (body?.baseHue ?? query.baseHue) as number | undefined,
-    harmony: (body?.harmony ?? query.harmony) as HarmonyType | undefined,
+    mode: (body?.mode ?? query["mode"]) as ThemeMode | undefined,
+    seed: body?.seed ?? (query["seed"] as string | undefined),
+    baseHue: (body?.baseHue ?? query["baseHue"]) as number | undefined,
+    harmony: (body?.harmony ?? query["harmony"]) as HarmonyType | undefined,
   };
 
   const options = normalizePayload(payload);
