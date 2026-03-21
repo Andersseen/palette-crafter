@@ -9,13 +9,13 @@ declare module "h3" {
   }
 
   export function defineEventHandler<T = unknown>(
-    handler: (event: H3Event) => T | Promise<T>
+    handler: (event: H3Event) => T | Promise<T>,
   ): (event: H3Event) => Promise<T>;
 
   export function getMethod(event: H3Event): string;
 
   export function getQuery(
-    event: H3Event
+    event: H3Event,
   ): Record<string, string | undefined | string[]>;
 
   export function readBody<T = unknown>(event: H3Event): Promise<T>;
