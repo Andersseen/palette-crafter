@@ -30,11 +30,9 @@
   },
   "homepage": "https://palette-crafter-psi.vercel.app",
   "scripts": {
-    "ng": "ng",
     "dev": "ng serve",
-    "start": "ng serve",
+    "clean": "rm -rf dist .angular/cache",
     "build": "ng build",
-    "serve:ssr": "pnpm dev:cf",
     "build:cf": "BUILD_PRESET=cloudflare-pages ng build",
     "dev:cf": "pnpm build:cf && wrangler pages dev",
     "deploy:cf": "pnpm build:cf && wrangler pages deploy"
@@ -50,7 +48,6 @@
     "@angular/platform-browser": "^21.2.3",
     "@angular/platform-server": "^21.2.3",
     "@angular/router": "^21.2.3",
-    "@angular/ssr": "^21.2.3",
     "@tailwindcss/postcss": "^4.1.11",
     "autoprefixer": "^10.4.21",
     "marked": "^15.0.7",

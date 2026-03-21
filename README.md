@@ -26,7 +26,7 @@ pnpm install
 Start a local dev server:
 
 ```bash
-pnpm start
+pnpm dev
 ```
 
 ### Build
@@ -44,8 +44,6 @@ Run the Cloudflare Pages build locally after generating the Pages output:
 ```bash
 pnpm dev:cf
 ```
-
-`pnpm serve:ssr` is an alias for the same local Cloudflare Pages preview flow.
 
 Deploy the SSR app to Cloudflare Pages:
 
