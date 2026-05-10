@@ -15,6 +15,7 @@ import Footer from "@components/footer";
 import Header from "@components/header";
 import HeroSection from "@components/hero-section";
 import ThemePreview from "@components/theme-preview";
+import ThemeOptions from "@components/theme-options";
 import { hexToRgb } from "@shared/utils";
 
 @Component({
@@ -26,6 +27,7 @@ import { hexToRgb } from "@shared/utils";
     ExportPanel,
     Header,
     HeroSection,
+    ThemeOptions,
     Footer,
   ],
   template: `
@@ -67,6 +69,8 @@ import { hexToRgb } from "@shared/utils";
             </div>
           }
 
+          <app-theme-options />
+
           <!-- Base Colors (Bg/Fg) -->
           <section class="mb-8 sm:mb-12">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
@@ -84,23 +88,54 @@ import { hexToRgb } from "@shared/utils";
           <!-- Color Scales -->
           <section class="mb-8 sm:mb-12 space-y-8">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
-              Color Scales
+              Brand Colors
             </h2>
 
-            <app-color-scale
-              name="Primary"
-              type="primary"
-              [scale]="primaryScale()"
-              (updateActive)="updateActiveColor('primary', $event)"
-            />
+            @if (colorModes().primary === "scale") {
+              <app-color-scale
+                name="Primary"
+                type="primary"
+                [scale]="primaryScale()"
+                (updateActive)="updateActiveColor('primary', $event)"
+              />
+            } @else {
+              <div>
+                <h3 class="text-lg font-semibold mb-3">Primary</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl">
+                  <app-color-swatch [swatch]="brandSwatches()[0]" />
+                </div>
+              </div>
+            }
 
-            <app-color-scale
-              name="Secondary"
-              type="secondary"
-              [scale]="secondaryScale()"
-              (updateActive)="updateActiveColor('secondary', $event)"
-            />
+            @if (colorModes().secondary === "scale") {
+              <app-color-scale
+                name="Secondary"
+                type="secondary"
+                [scale]="secondaryScale()"
+                (updateActive)="updateActiveColor('secondary', $event)"
+              />
+            } @else {
+              <div>
+                <h3 class="text-lg font-semibold mb-3">Secondary</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl">
+                  <app-color-swatch [swatch]="brandSwatches()[1]" />
+                </div>
+              </div>
+            }
           </section>
+
+          @if (statusSwatches().length > 0) {
+            <section class="mb-8 sm:mb-12">
+              <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+                Status Colors
+              </h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                @for (swatch of statusSwatches(); track swatch.cssVar) {
+                  <app-color-swatch [swatch]="swatch" />
+                }
+              </div>
+            </section>
+          }
 
           <section class="mb-8 sm:mb-12">
             <app-theme-preview />
@@ -136,6 +171,9 @@ export default class Home {
 
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
+  colorModes = computed(() => this.colorService.selectedColorModes());
+  brandSwatches = computed(() => this.colorService.getBrandColorSwatches());
+  statusSwatches = computed(() => this.colorService.getStatusColorSwatches());
 
   constructor() {
     void this.colorService.generatePalette({ seed: "palette-crafter-home" });
