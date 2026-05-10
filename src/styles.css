@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../node_modules/@voltui/components";
 
 :root {
   --bg: "#ffffff";
@@ -15,8 +16,20 @@
 @theme {
   --color-background: rgb(var(--bg));
   --color-foreground: rgb(var(--fg));
+  --color-surface: rgb(var(--bg));
+  --color-surface-foreground: rgb(var(--fg));
+  --color-card: rgb(var(--bg));
+  --color-card-foreground: rgb(var(--fg));
+  --color-muted: rgb(var(--fg) / 0.08);
+  --color-muted-foreground: rgb(var(--fg) / 0.65);
+  --color-accent: rgb(var(--fg) / 0.1);
+  --color-accent-foreground: rgb(var(--fg));
+  --color-border: rgb(var(--fg) / 0.2);
+  --color-input: rgb(var(--fg) / 0.2);
+  --color-ring: rgb(var(--primary));
 
   --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
   --color-primary-contrast: rgb(var(--primary-contrast));
   --color-primary-50: rgb(var(--primary-50));
   --color-primary-50-contrast: rgb(var(--primary-50-contrast));
@@ -42,6 +55,7 @@
   --color-primary-950-contrast: rgb(var(--primary-950-contrast));
 
   --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
   --color-secondary-contrast: rgb(var(--secondary-contrast));
   --color-secondary-50: rgb(var(--secondary-50));
   --color-secondary-50-contrast: rgb(var(--secondary-50-contrast));
