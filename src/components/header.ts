@@ -1,4 +1,4 @@
-import { Component, input, Input, output } from "@angular/core";
+import { Component, input, output } from "@angular/core";
 import ThemeSwitcher from "./theme-switcher";
 
 @Component({
@@ -16,9 +16,10 @@ import ThemeSwitcher from "./theme-switcher";
             </p>
           </div>
           <button
-            class="mt-2 sm:mt-0 p-2 rounded-lg border transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto"
+            class="mt-2 sm:mt-0 p-2 rounded-lg border transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
             style="border-color: rgb(var(--fg) / 0.3); color: rgb(var(--fg) / 1); focus:ring-color: rgb(var(--primary) / 1)"
             (click)="toggleThemeMode.emit($event)"
+            [disabled]="isLoading()"
             [title]="
               isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'
             "
@@ -33,5 +34,6 @@ import ThemeSwitcher from "./theme-switcher";
 })
 export default class Header {
   isDarkMode = input();
+  isLoading = input(false);
   toggleThemeMode = output<MouseEvent>();
 }

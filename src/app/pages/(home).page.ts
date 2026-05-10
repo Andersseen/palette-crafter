@@ -15,6 +15,7 @@ import Footer from "@components/footer";
 import Header from "@components/header";
 import HeroSection from "@components/hero-section";
 import ThemePreview from "@components/theme-preview";
+import ThemeOptions from "@components/theme-options";
 import { hexToRgb } from "@shared/utils";
 
 @Component({
@@ -26,6 +27,7 @@ import { hexToRgb } from "@shared/utils";
     ExportPanel,
     Header,
     HeroSection,
+    ThemeOptions,
     Footer,
   ],
   template: `
@@ -37,6 +39,7 @@ import { hexToRgb } from "@shared/utils";
       <div class="blend-contrast flex min-h-screen flex-col">
         <app-header
           [isDarkMode]="isDarkMode()"
+          [isLoading]="isLoading()"
           (toggleThemeMode)="toggleThemeMode($event)"
         />
 
@@ -45,8 +48,26 @@ import { hexToRgb } from "@shared/utils";
         >
           <app-hero-section
             [isDarkMode]="isDarkMode()"
+            [isLoading]="isLoading()"
             (generatePalette)="generatePalette($event)"
           />
+
+          @if (themeError(); as message) {
+            <div
+              class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm shadow-sm"
+              role="alert"
+            >
+              <p class="opacity-80">{{ message }}</p>
+              <button
+                class="inline-flex shrink-0 items-center justify-center rounded-md border border-foreground/20 px-3 py-2 font-medium hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                [disabled]="isLoading()"
+                (click)="retryTheme()"
+              >
+                Retry
+              </button>
+            </div>
+          }
 
           <!-- Base Colors (Bg/Fg) -->
           <section class="mb-8 sm:mb-12">
@@ -65,23 +86,62 @@ import { hexToRgb } from "@shared/utils";
           <!-- Color Scales -->
           <section class="mb-8 sm:mb-12 space-y-8">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
-              Color Scales
+              Brand Colors
             </h2>
 
-            <app-color-scale
-              name="Primary"
-              type="primary"
-              [scale]="primaryScale()"
-              (updateActive)="updateActiveColor('primary', $event)"
-            />
+            @if (allBrandColorsAreSingle()) {
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl">
+                @for (swatch of brandSwatches(); track swatch.cssVar) {
+                  <app-color-swatch [swatch]="swatch" layout="row" />
+                }
+              </div>
+            } @else {
+              @if (colorModes().primary === "scale") {
+                <app-color-scale
+                  name="Primary"
+                  type="primary"
+                  [scale]="primaryScale()"
+                  (updateActive)="updateActiveColor('primary', $event)"
+                />
+              } @else {
+                <div>
+                  <h3 class="text-lg font-semibold mb-3">Primary</h3>
+                  <div class="max-w-2xl">
+                    <app-color-swatch [swatch]="brandSwatches()[0]" layout="row" />
+                  </div>
+                </div>
+              }
 
-            <app-color-scale
-              name="Secondary"
-              type="secondary"
-              [scale]="secondaryScale()"
-              (updateActive)="updateActiveColor('secondary', $event)"
-            />
+              @if (colorModes().secondary === "scale") {
+                <app-color-scale
+                  name="Secondary"
+                  type="secondary"
+                  [scale]="secondaryScale()"
+                  (updateActive)="updateActiveColor('secondary', $event)"
+                />
+              } @else {
+                <div>
+                  <h3 class="text-lg font-semibold mb-3">Secondary</h3>
+                  <div class="max-w-2xl">
+                    <app-color-swatch [swatch]="brandSwatches()[1]" layout="row" />
+                  </div>
+                </div>
+              }
+            }
           </section>
+
+          @if (statusSwatches().length > 0) {
+            <section class="mb-8 sm:mb-12">
+              <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+                Status Colors
+              </h2>
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl">
+                @for (swatch of statusSwatches(); track swatch.cssVar) {
+                  <app-color-swatch [swatch]="swatch" layout="row" />
+                }
+              </div>
+            </section>
+          }
 
           <section class="mb-8 sm:mb-12">
             <app-theme-preview />
@@ -94,6 +154,8 @@ import { hexToRgb } from "@shared/utils";
 
         <app-footer />
       </div>
+
+      <app-theme-options />
     </section>
   `,
 })
@@ -105,6 +167,8 @@ export default class Home {
   overlay = viewChild<ElementRef<HTMLElement>>("overlay");
 
   isDarkMode = computed(() => this.colorService.mode() === "dark");
+  isLoading = computed(() => this.colorService.isLoading());
+  themeError = computed(() => this.colorService.error());
 
   // Split swatches
   baseSwatches = computed(() => {
@@ -115,17 +179,31 @@ export default class Home {
 
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
+  colorModes = computed(() => this.colorService.selectedColorModes());
+  allBrandColorsAreSingle = computed(() => {
+    const modes = this.colorModes();
+    return modes.primary === "single" && modes.secondary === "single";
+  });
+  brandSwatches = computed(() => this.colorService.getBrandColorSwatches());
+  statusSwatches = computed(() => this.colorService.getStatusColorSwatches());
 
   constructor() {
-    this.colorService.generatePalette();
-    this.colorService.updateCSSVariables();
+    void this.colorService.generatePalette({ seed: "palette-crafter-home" });
   }
 
-  generatePalette(ev?: MouseEvent): void {
+  async generatePalette(ev?: MouseEvent): Promise<void> {
+    if (this.isLoading()) {
+      return;
+    }
+
     this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
     this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
-    this.colorService.generatePalette();
-    this.colorService.updateCSSVariables();
+    const updated = await this.colorService.generatePalette();
+
+    if (!updated) {
+      return;
+    }
+
     this.overlay()!.nativeElement.style.background = `rgba(${hexToRgb(
       this.colorService.theme().primary.DEFAULT,
     )} / 0.2)`;
@@ -135,12 +213,18 @@ export default class Home {
       this.root.classList.remove("theme-generate-animating");
     }, 300);
   }
-  toggleThemeMode(ev?: MouseEvent): void {
-    this.colorService.toggleThemeMode();
-    this.colorService.generatePalette();
+  async toggleThemeMode(ev?: MouseEvent): Promise<void> {
+    if (this.isLoading()) {
+      return;
+    }
 
     this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
     this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
+    const updated = await this.colorService.toggleThemeMode();
+
+    if (!updated) {
+      return;
+    }
 
     this.overlay()!.nativeElement.style.background = `rgb(${hexToRgb(
       this.colorService.theme().bg,
@@ -156,5 +240,9 @@ export default class Home {
 
   updateActiveColor(type: "primary" | "secondary", shade: string): void {
     this.colorService.updateActiveShade(type, shade);
+  }
+
+  retryTheme(): void {
+    void this.colorService.generatePalette();
   }
 }

@@ -8,17 +8,15 @@ import {
 } from "h3";
 import {
   generateTheme,
-  type HarmonyType,
   type ThemeGenerationOptions,
 } from "../../../../shared/theme-generator";
-import type { ThemeMode } from "../../../../shared/types";
+import type {
+  HarmonyType,
+  ThemeApiRequest,
+  ThemeMode,
+} from "../../../../shared/types";
 
-type ThemeRequest = {
-  mode?: ThemeMode;
-  seed?: number | string;
-  baseHue?: number;
-  harmony?: HarmonyType;
-};
+type ThemeRequest = ThemeApiRequest;
 
 const HARMONIES: HarmonyType[] = [
   "analogous",

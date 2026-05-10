@@ -19,6 +19,7 @@ export interface Theme {
   fg: string;
   primary: ColorScale;
   secondary: ColorScale;
+  status?: StatusColorScales;
 }
 
 export interface HSLColor {
@@ -42,3 +43,37 @@ export interface ColorSwatchType {
 }
 
 export type ThemeMode = "light" | "dark";
+export type ColorTokenMode = "single" | "scale";
+export type StatusColorName = "info" | "success" | "warning" | "danger";
+
+export type StatusColorScales = Record<StatusColorName, ColorScale>;
+
+export type ThemeColorModes = Record<"primary" | "secondary", ColorTokenMode>;
+export type EnabledStatusColors = Record<StatusColorName, boolean>;
+
+export type HarmonyType =
+  | "analogous"
+  | "complementary"
+  | "split-complementary"
+  | "triadic";
+
+export interface ThemeApiRequest {
+  mode?: ThemeMode;
+  seed?: number | string;
+  baseHue?: number;
+  harmony?: HarmonyType;
+}
+
+export interface ThemeApiMeta {
+  mode: ThemeMode;
+  baseHue: number;
+  secondaryHue: number;
+  harmony: HarmonyType;
+  seeded: boolean;
+}
+
+export interface ThemeApiResponse {
+  ok: true;
+  theme: Theme;
+  meta: ThemeApiMeta;
+}

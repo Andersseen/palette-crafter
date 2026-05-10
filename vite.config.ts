@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
         allow: ["."],
       },
     },
+    envPrefix: ["VITE_", "THEME_"],
     test: {
       globals: true,
       environment: "jsdom",

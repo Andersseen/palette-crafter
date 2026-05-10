@@ -1,10 +1,31 @@
 @import "tailwindcss";
+@source "../node_modules/@voltui/components";
 
 :root {
-  --bg: "#ffffff";
-  --fg: "#1a1a1a";
-  --primary: "#3b82f6";
-  --secondary: "#10b981";
+  --bg: 255 255 255;
+  --fg: 26 26 26;
+  --primary: 59 130 246;
+  --primary-foreground: 255 255 255;
+  --primary-contrast: 255 255 255;
+  --secondary: 16 185 129;
+  --secondary-foreground: 255 255 255;
+  --secondary-contrast: 255 255 255;
+
+  --background: rgb(var(--bg));
+  --foreground: rgb(var(--fg));
+  --surface: rgb(var(--bg));
+  --surface-foreground: rgb(var(--fg));
+  --popover: rgb(var(--bg));
+  --popover-foreground: rgb(var(--fg));
+  --muted: rgb(var(--fg) / 0.08);
+  --muted-foreground: rgb(var(--fg) / 0.65);
+  --accent: rgb(var(--fg) / 0.1);
+  --accent-foreground: rgb(var(--fg));
+  --border: rgb(var(--fg) / 0.2);
+  --input: rgb(var(--fg) / 0.2);
+  --ring: rgb(var(--primary));
+  --destructive: rgb(220 38 38);
+  --destructive-foreground: rgb(255 255 255);
 
   --x: 50vw;
   --y: 50vh;
@@ -15,8 +36,24 @@
 @theme {
   --color-background: rgb(var(--bg));
   --color-foreground: rgb(var(--fg));
+  --color-surface: rgb(var(--bg));
+  --color-surface-foreground: rgb(var(--fg));
+  --color-card: rgb(var(--bg));
+  --color-card-foreground: rgb(var(--fg));
+  --color-popover: rgb(var(--bg));
+  --color-popover-foreground: rgb(var(--fg));
+  --color-muted: rgb(var(--fg) / 0.08);
+  --color-muted-foreground: rgb(var(--fg) / 0.65);
+  --color-accent: rgb(var(--fg) / 0.1);
+  --color-accent-foreground: rgb(var(--fg));
+  --color-border: rgb(var(--fg) / 0.2);
+  --color-input: rgb(var(--fg) / 0.2);
+  --color-ring: rgb(var(--primary));
+  --color-destructive: rgb(220 38 38);
+  --color-destructive-foreground: rgb(255 255 255);
 
   --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
   --color-primary-contrast: rgb(var(--primary-contrast));
   --color-primary-50: rgb(var(--primary-50));
   --color-primary-50-contrast: rgb(var(--primary-50-contrast));
@@ -42,6 +79,7 @@
   --color-primary-950-contrast: rgb(var(--primary-950-contrast));
 
   --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
   --color-secondary-contrast: rgb(var(--secondary-contrast));
   --color-secondary-50: rgb(var(--secondary-50));
   --color-secondary-50-contrast: rgb(var(--secondary-50-contrast));

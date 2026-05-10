@@ -12,6 +12,14 @@ import type {
   ColorSwatchType,
   ThemeMode,
   OklabColor,
+  ThemeApiMeta,
+  ThemeApiRequest,
+  ThemeApiResponse,
+  ColorScale,
+  ColorTokenMode,
+  EnabledStatusColors,
+  StatusColorName,
+  ThemeColorModes,
 } from "@shared/types";
 import {
   calculateContrast,
@@ -20,59 +28,131 @@ import {
   hexToRgb,
   generateColorScale,
 } from "@shared/utils";
-import { generateTheme } from "@shared/theme-generator";
+import ThemeApiClient from "./theme-api-client";
+
+type CachedTheme = Pick<ThemeApiResponse, "theme" | "meta">;
+const COLOR_SCALE_SHADES = [
+  50,
+  100,
+  200,
+  300,
+  400,
+  500,
+  600,
+  700,
+  800,
+  900,
+  950,
+] as const;
 
 @Injectable({ providedIn: "root" })
 export default class ColorPalette {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
+  private readonly themeApi = inject(ThemeApiClient);
+  private readonly storageKey = "palette-crafter:last-theme";
 
   private currentTheme = signal<Theme>({
     bg: "#ffffff",
     fg: "#1a1a1a",
     primary: generateColorScale("#3b82f6"),
     secondary: generateColorScale("#10b981"),
+    status: {
+      info: generateColorScale("#2563eb"),
+      success: generateColorScale("#16a34a"),
+      warning: generateColorScale("#f59e0b"),
+      danger: generateColorScale("#dc2626"),
+    },
   });
 
   private themeMode = signal<ThemeMode>("light");
+  private currentMeta = signal<ThemeApiMeta | null>(null);
+  private loadingState = signal(false);
+  private errorState = signal<string | null>(null);
+  private colorModes = signal<ThemeColorModes>({
+    primary: "scale",
+    secondary: "scale",
+  });
+  private statusColors = signal<EnabledStatusColors>({
+    info: false,
+    success: false,
+    warning: false,
+    danger: false,
+  });
 
   // Public computed signals
   theme = computed(() => this.currentTheme());
   mode = computed(() => this.themeMode());
+  meta = computed(() => this.currentMeta());
+  isLoading = computed(() => this.loadingState());
+  error = computed(() => this.errorState());
+  selectedColorModes = computed(() => this.colorModes());
+  enabledStatusColors = computed(() => this.statusColors());
 
   constructor() {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
 
+    const hasCachedTheme = this.restoreCachedTheme();
+
     // Auto-detect system preference
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
     ).matches;
-    this.setThemeMode(prefersDark ? "dark" : "light");
+
+    if (!hasCachedTheme) {
+      this.setThemeMode(prefersDark ? "dark" : "light");
+    }
 
     // Listen for system preference changes
     window
       .matchMedia("(prefers-color-scheme: dark)")
       .addEventListener("change", (e) => {
         this.setThemeMode(e.matches ? "dark" : "light");
+        void this.generatePalette({ mode: this.themeMode() });
       });
   }
 
   /**
-   * Generates a harmonious color palette using HSL color theory
+   * Requests a theme from the API and keeps the last valid theme as fallback.
    */
-  generatePalette(): void {
-    const { theme } = generateTheme({ mode: this.themeMode() });
-    this.currentTheme.set(theme);
+  async generatePalette(params: ThemeApiRequest = {}): Promise<boolean> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+
+    this.loadingState.set(true);
+    this.errorState.set(null);
+
+    try {
+      const response = await this.themeApi.createTheme({
+        mode: this.themeMode(),
+        ...params,
+      });
+
+      this.currentTheme.set(response.theme);
+      this.currentMeta.set(response.meta);
+      this.setThemeMode(response.meta.mode);
+      this.persistTheme(response);
+      this.updateCSSVariables();
+
+      return true;
+    } catch (error) {
+      this.errorState.set(this.toFriendlyError(error));
+      return false;
+    } finally {
+      this.loadingState.set(false);
+    }
   }
 
   /**
    * Toggles between light and dark theme modes
    */
-  toggleThemeMode(): void {
+  async toggleThemeMode(): Promise<boolean> {
     const newMode = this.themeMode() === "light" ? "dark" : "light";
     this.setThemeMode(newMode);
+    return this.generatePalette({ mode: newMode });
   }
 
   /**
@@ -101,36 +181,63 @@ export default class ColorPalette {
 
     root.style.setProperty("--bg", hexToRgb(theme.bg));
     root.style.setProperty("--fg", hexToRgb(theme.fg));
+    root.style.setProperty("--background", `rgb(${hexToRgb(theme.bg)})`);
+    root.style.setProperty("--foreground", `rgb(${hexToRgb(theme.fg)})`);
+    root.style.setProperty("--surface", `rgb(${hexToRgb(theme.bg)})`);
+    root.style.setProperty(
+      "--surface-foreground",
+      `rgb(${hexToRgb(theme.fg)})`,
+    );
+    root.style.setProperty("--popover", `rgb(${hexToRgb(theme.bg)})`);
+    root.style.setProperty(
+      "--popover-foreground",
+      `rgb(${hexToRgb(theme.fg)})`,
+    );
+    root.style.setProperty("--muted", `rgb(${hexToRgb(theme.fg)} / 0.08)`);
+    root.style.setProperty(
+      "--muted-foreground",
+      `rgb(${hexToRgb(theme.fg)} / 0.65)`,
+    );
+    root.style.setProperty("--accent", `rgb(${hexToRgb(theme.fg)} / 0.1)`);
+    root.style.setProperty("--accent-foreground", `rgb(${hexToRgb(theme.fg)})`);
+    root.style.setProperty("--border", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
+    root.style.setProperty("--input", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
 
     // Helper to set color and contrast
-    const setScaleVars = (name: string, scale: any) => {
+    const setScaleVars = (name: string, scale: ColorScale) => {
       // Set DEFAULT and its contrast
       root.style.setProperty(`--${name}`, hexToRgb(scale.DEFAULT));
-      const defaultContrast =
-        calculateContrast(scale.DEFAULT, "#ffffff") >= 4.5
-          ? "#ffffff"
-          : "#000000";
+      if (name === "primary") {
+        root.style.setProperty("--ring", `rgb(${hexToRgb(scale.DEFAULT)})`);
+      }
+      const defaultContrast = scale.foreground;
+      root.style.setProperty(
+        `--${name}-foreground`,
+        hexToRgb(defaultContrast),
+      );
       root.style.setProperty(`--${name}-contrast`, hexToRgb(defaultContrast));
 
-      // Iterating through all shades 50-950
-      Object.keys(scale).forEach((key) => {
-        if (key !== "DEFAULT" && key !== "foreground") {
-          const hex = scale[key];
-          root.style.setProperty(`--${name}-${key}`, hexToRgb(hex));
+      COLOR_SCALE_SHADES.forEach((key) => {
+        const hex = scale[key];
+        root.style.setProperty(`--${name}-${key}`, hexToRgb(hex));
 
-          // Calculate and set contrast for this specific shade
-          const contrast =
-            calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
-          root.style.setProperty(
-            `--${name}-${key}-contrast`,
-            hexToRgb(contrast),
-          );
-        }
+        const contrast =
+          calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
+        root.style.setProperty(
+          `--${name}-${key}-contrast`,
+          hexToRgb(contrast),
+        );
       });
     };
 
     setScaleVars("primary", theme.primary);
     setScaleVars("secondary", theme.secondary);
+
+    if (theme.status) {
+      (Object.keys(theme.status) as StatusColorName[]).forEach((name) => {
+        setScaleVars(name, theme.status![name]);
+      });
+    }
   }
 
   /**
@@ -150,6 +257,23 @@ export default class ColorPalette {
     });
 
     this.updateCSSVariables();
+  }
+
+  setColorTokenMode(
+    token: "primary" | "secondary",
+    mode: ColorTokenMode,
+  ): void {
+    this.colorModes.update((current) => ({
+      ...current,
+      [token]: mode,
+    }));
+  }
+
+  setStatusColorEnabled(name: StatusColorName, enabled: boolean): void {
+    this.statusColors.update((current) => ({
+      ...current,
+      [name]: enabled,
+    }));
   }
 
   /**
@@ -189,6 +313,33 @@ export default class ColorPalette {
     ];
   }
 
+  getBrandColorSwatches(): ColorSwatchType[] {
+    const theme = this.currentTheme();
+    return [
+      this.toColorSwatch("Primary", theme.primary.DEFAULT, "--primary"),
+      this.toColorSwatch("Secondary", theme.secondary.DEFAULT, "--secondary"),
+    ];
+  }
+
+  getStatusColorSwatches(): ColorSwatchType[] {
+    const theme = this.currentTheme();
+    const status = theme.status;
+
+    if (!status) {
+      return [];
+    }
+
+    return (Object.keys(this.statusColors()) as StatusColorName[])
+      .filter((name) => this.statusColors()[name])
+      .map((name) =>
+        this.toColorSwatch(
+          this.labelForStatusColor(name),
+          status[name].DEFAULT,
+          `--${name}`,
+        ),
+      );
+  }
+
   /**
    * Formats HSL values for display
    */
@@ -205,43 +356,123 @@ export default class ColorPalette {
     )})`;
   }
 
+  private toColorSwatch(
+    name: string,
+    hex: string,
+    cssVar: string,
+  ): ColorSwatchType {
+    return {
+      name,
+      hex,
+      hsl: this.formatHSL(hexToHsl(hex)),
+      oklab: this.formatOklab(hexToOklab(hex)),
+      cssVar,
+    };
+  }
+
+  private labelForStatusColor(name: StatusColorName): string {
+    switch (name) {
+      case "info":
+        return "Info";
+      case "success":
+        return "Success";
+      case "warning":
+        return "Warning";
+      case "danger":
+        return "Danger";
+    }
+  }
+
+  private restoreCachedTheme(): boolean {
+    try {
+      const raw = window.localStorage.getItem(this.storageKey);
+
+      if (!raw) {
+        return false;
+      }
+
+      const cached = JSON.parse(raw) as Partial<CachedTheme>;
+
+      if (!cached.theme || !cached.meta) {
+        return false;
+      }
+
+      this.currentTheme.set(cached.theme);
+      this.currentMeta.set(cached.meta);
+      this.setThemeMode(cached.meta.mode);
+      this.updateCSSVariables();
+      return true;
+    } catch {
+      window.localStorage.removeItem(this.storageKey);
+      return false;
+    }
+  }
+
+  private persistTheme(response: CachedTheme): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      this.storageKey,
+      JSON.stringify({
+        theme: response.theme,
+        meta: response.meta,
+      }),
+    );
+  }
+
+  private toFriendlyError(error: unknown): string {
+    const reason = error instanceof Error ? error.message : "Unknown error.";
+    return `Could not load a fresh theme from the API. Keeping the last valid palette. ${reason}`;
+  }
+
   /**
    * Gets Tailwind config extension object
    */
   getTailwindConfig(): string {
+    const theme = this.currentTheme();
+    const colorModes = this.colorModes();
+    const enabledStatusColors = this.statusColors();
+    const statusEntries = theme.status
+      ? (Object.keys(enabledStatusColors) as StatusColorName[])
+          .filter((name) => enabledStatusColors[name])
+          .map((name) => {
+            return `  --color-${name}: rgb(var(--${name}));
+  --color-${name}-foreground: rgb(var(--${name}-foreground));`;
+          })
+          .join("\n\n")
+      : "";
+    const scaleEntries = (["primary", "secondary"] as const)
+      .map((name) => {
+        if (colorModes[name] === "single") {
+          return `  --color-${name}: rgb(var(--${name}));
+  --color-${name}-foreground: rgb(var(--${name}-foreground));`;
+        }
+
+        return `  --color-${name}: rgb(var(--${name}));
+  --color-${name}-foreground: rgb(var(--${name}-foreground));
+  --color-${name}-50: rgb(var(--${name}-50));
+  --color-${name}-100: rgb(var(--${name}-100));
+  --color-${name}-200: rgb(var(--${name}-200));
+  --color-${name}-300: rgb(var(--${name}-300));
+  --color-${name}-400: rgb(var(--${name}-400));
+  --color-${name}-500: rgb(var(--${name}-500));
+  --color-${name}-600: rgb(var(--${name}-600));
+  --color-${name}-700: rgb(var(--${name}-700));
+  --color-${name}-800: rgb(var(--${name}-800));
+  --color-${name}-900: rgb(var(--${name}-900));
+  --color-${name}-950: rgb(var(--${name}-950));`;
+      })
+      .join("\n\n");
+
     return `
- @theme {
+@theme {
   --color-background: rgb(var(--bg));
   --color-foreground: rgb(var(--fg));
-  
-  --color-primary: rgb(var(--primary));
-  --color-primary-foreground: rgb(var(--primary-foreground));
-  --color-primary-50: rgb(var(--primary-50));
-  --color-primary-100: rgb(var(--primary-100));
-  --color-primary-200: rgb(var(--primary-200));
-  --color-primary-300: rgb(var(--primary-300));
-  --color-primary-400: rgb(var(--primary-400));
-  --color-primary-500: rgb(var(--primary-500));
-  --color-primary-600: rgb(var(--primary-600));
-  --color-primary-700: rgb(var(--primary-700));
-  --color-primary-800: rgb(var(--primary-800));
-  --color-primary-900: rgb(var(--primary-900));
-  --color-primary-950: rgb(var(--primary-950));
 
-  --color-secondary: rgb(var(--secondary));
-  --color-secondary-foreground: rgb(var(--secondary-foreground));
-  --color-secondary-50: rgb(var(--secondary-50));
-  --color-secondary-100: rgb(var(--secondary-100));
-  --color-secondary-200: rgb(var(--secondary-200));
-  --color-secondary-300: rgb(var(--secondary-300));
-  --color-secondary-400: rgb(var(--secondary-400));
-  --color-secondary-500: rgb(var(--secondary-500));
-  --color-secondary-600: rgb(var(--secondary-600));
-  --color-secondary-700: rgb(var(--secondary-700));
-  --color-secondary-800: rgb(var(--secondary-800));
-  --color-secondary-900: rgb(var(--secondary-900));
-  --color-secondary-950: rgb(var(--secondary-950));
+${scaleEntries}${statusEntries ? `\n\n${statusEntries}` : ""}
 }
-  }`;
+`.trim();
   }
 }

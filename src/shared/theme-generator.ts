@@ -4,13 +4,7 @@ import {
   calculateContrast,
   hexToHsl,
 } from "./utils";
-import type { Theme, ThemeMode } from "./types";
-
-export type HarmonyType =
-  | "analogous"
-  | "complementary"
-  | "split-complementary"
-  | "triadic";
+import type { HarmonyType, Theme, ThemeMode } from "./types";
 
 export interface ThemeGenerationOptions {
   mode?: ThemeMode;
@@ -134,6 +128,7 @@ export const generateTheme = (
   }
 
   fgColor = ensureAccessibleForeground(bgColor, fgColor);
+  const statusLightness = mode === "light" ? 52 : 62;
 
   return {
     theme: {
@@ -141,6 +136,20 @@ export const generateTheme = (
       fg: fgColor,
       primary: generateColorScale(primaryBase),
       secondary: generateColorScale(secondaryBase),
+      status: {
+        info: generateColorScale(
+          hslToHex(210, mode === "light" ? 80 : 70, statusLightness),
+        ),
+        success: generateColorScale(
+          hslToHex(145, mode === "light" ? 65 : 55, mode === "light" ? 42 : 52),
+        ),
+        warning: generateColorScale(
+          hslToHex(42, mode === "light" ? 88 : 78, statusLightness),
+        ),
+        danger: generateColorScale(
+          hslToHex(0, mode === "light" ? 72 : 62, statusLightness),
+        ),
+      },
     },
     meta: {
       mode,
