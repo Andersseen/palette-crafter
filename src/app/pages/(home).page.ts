@@ -69,8 +69,6 @@ import { hexToRgb } from "@shared/utils";
             </div>
           }
 
-          <app-theme-options />
-
           <!-- Base Colors (Bg/Fg) -->
           <section class="mb-8 sm:mb-12">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
@@ -91,36 +89,44 @@ import { hexToRgb } from "@shared/utils";
               Brand Colors
             </h2>
 
-            @if (colorModes().primary === "scale") {
-              <app-color-scale
-                name="Primary"
-                type="primary"
-                [scale]="primaryScale()"
-                (updateActive)="updateActiveColor('primary', $event)"
-              />
-            } @else {
-              <div>
-                <h3 class="text-lg font-semibold mb-3">Primary</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl">
-                  <app-color-swatch [swatch]="brandSwatches()[0]" />
-                </div>
+            @if (allBrandColorsAreSingle()) {
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl">
+                @for (swatch of brandSwatches(); track swatch.cssVar) {
+                  <app-color-swatch [swatch]="swatch" layout="row" />
+                }
               </div>
-            }
+            } @else {
+              @if (colorModes().primary === "scale") {
+                <app-color-scale
+                  name="Primary"
+                  type="primary"
+                  [scale]="primaryScale()"
+                  (updateActive)="updateActiveColor('primary', $event)"
+                />
+              } @else {
+                <div>
+                  <h3 class="text-lg font-semibold mb-3">Primary</h3>
+                  <div class="max-w-2xl">
+                    <app-color-swatch [swatch]="brandSwatches()[0]" layout="row" />
+                  </div>
+                </div>
+              }
 
-            @if (colorModes().secondary === "scale") {
-              <app-color-scale
-                name="Secondary"
-                type="secondary"
-                [scale]="secondaryScale()"
-                (updateActive)="updateActiveColor('secondary', $event)"
-              />
-            } @else {
-              <div>
-                <h3 class="text-lg font-semibold mb-3">Secondary</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl">
-                  <app-color-swatch [swatch]="brandSwatches()[1]" />
+              @if (colorModes().secondary === "scale") {
+                <app-color-scale
+                  name="Secondary"
+                  type="secondary"
+                  [scale]="secondaryScale()"
+                  (updateActive)="updateActiveColor('secondary', $event)"
+                />
+              } @else {
+                <div>
+                  <h3 class="text-lg font-semibold mb-3">Secondary</h3>
+                  <div class="max-w-2xl">
+                    <app-color-swatch [swatch]="brandSwatches()[1]" layout="row" />
+                  </div>
                 </div>
-              </div>
+              }
             }
           </section>
 
@@ -129,9 +135,9 @@ import { hexToRgb } from "@shared/utils";
               <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
                 Status Colors
               </h2>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl">
                 @for (swatch of statusSwatches(); track swatch.cssVar) {
-                  <app-color-swatch [swatch]="swatch" />
+                  <app-color-swatch [swatch]="swatch" layout="row" />
                 }
               </div>
             </section>
@@ -148,6 +154,8 @@ import { hexToRgb } from "@shared/utils";
 
         <app-footer />
       </div>
+
+      <app-theme-options />
     </section>
   `,
 })
@@ -172,6 +180,10 @@ export default class Home {
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
   colorModes = computed(() => this.colorService.selectedColorModes());
+  allBrandColorsAreSingle = computed(() => {
+    const modes = this.colorModes();
+    return modes.primary === "single" && modes.secondary === "single";
+  });
   brandSwatches = computed(() => this.colorService.getBrandColorSwatches());
   statusSwatches = computed(() => this.colorService.getStatusColorSwatches());
 

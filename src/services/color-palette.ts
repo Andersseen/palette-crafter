@@ -181,11 +181,35 @@ export default class ColorPalette {
 
     root.style.setProperty("--bg", hexToRgb(theme.bg));
     root.style.setProperty("--fg", hexToRgb(theme.fg));
+    root.style.setProperty("--background", `rgb(${hexToRgb(theme.bg)})`);
+    root.style.setProperty("--foreground", `rgb(${hexToRgb(theme.fg)})`);
+    root.style.setProperty("--surface", `rgb(${hexToRgb(theme.bg)})`);
+    root.style.setProperty(
+      "--surface-foreground",
+      `rgb(${hexToRgb(theme.fg)})`,
+    );
+    root.style.setProperty("--popover", `rgb(${hexToRgb(theme.bg)})`);
+    root.style.setProperty(
+      "--popover-foreground",
+      `rgb(${hexToRgb(theme.fg)})`,
+    );
+    root.style.setProperty("--muted", `rgb(${hexToRgb(theme.fg)} / 0.08)`);
+    root.style.setProperty(
+      "--muted-foreground",
+      `rgb(${hexToRgb(theme.fg)} / 0.65)`,
+    );
+    root.style.setProperty("--accent", `rgb(${hexToRgb(theme.fg)} / 0.1)`);
+    root.style.setProperty("--accent-foreground", `rgb(${hexToRgb(theme.fg)})`);
+    root.style.setProperty("--border", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
+    root.style.setProperty("--input", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
 
     // Helper to set color and contrast
     const setScaleVars = (name: string, scale: ColorScale) => {
       // Set DEFAULT and its contrast
       root.style.setProperty(`--${name}`, hexToRgb(scale.DEFAULT));
+      if (name === "primary") {
+        root.style.setProperty("--ring", `rgb(${hexToRgb(scale.DEFAULT)})`);
+      }
       const defaultContrast = scale.foreground;
       root.style.setProperty(
         `--${name}-foreground`,
