@@ -12,6 +12,10 @@ import type {
   ColorSwatchType,
   ThemeMode,
   OklabColor,
+  ThemeApiMeta,
+  ThemeApiRequest,
+  ThemeApiResponse,
+  ColorScale,
 } from "@shared/types";
 import {
   calculateContrast,
@@ -20,12 +24,29 @@ import {
   hexToRgb,
   generateColorScale,
 } from "@shared/utils";
-import { generateTheme } from "@shared/theme-generator";
+import ThemeApiClient from "./theme-api-client";
+
+type CachedTheme = Pick<ThemeApiResponse, "theme" | "meta">;
+const COLOR_SCALE_SHADES = [
+  "50",
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+  "950",
+] as const;
 
 @Injectable({ providedIn: "root" })
 export default class ColorPalette {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
+  private readonly themeApi = inject(ThemeApiClient);
+  private readonly storageKey = "palette-crafter:last-theme";
 
   private currentTheme = signal<Theme>({
     bg: "#ffffff",
@@ -35,44 +56,81 @@ export default class ColorPalette {
   });
 
   private themeMode = signal<ThemeMode>("light");
+  private currentMeta = signal<ThemeApiMeta | null>(null);
+  private loadingState = signal(false);
+  private errorState = signal<string | null>(null);
 
   // Public computed signals
   theme = computed(() => this.currentTheme());
   mode = computed(() => this.themeMode());
+  meta = computed(() => this.currentMeta());
+  isLoading = computed(() => this.loadingState());
+  error = computed(() => this.errorState());
 
   constructor() {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
 
+    const hasCachedTheme = this.restoreCachedTheme();
+
     // Auto-detect system preference
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
     ).matches;
-    this.setThemeMode(prefersDark ? "dark" : "light");
+
+    if (!hasCachedTheme) {
+      this.setThemeMode(prefersDark ? "dark" : "light");
+    }
 
     // Listen for system preference changes
     window
       .matchMedia("(prefers-color-scheme: dark)")
       .addEventListener("change", (e) => {
         this.setThemeMode(e.matches ? "dark" : "light");
+        void this.generatePalette({ mode: this.themeMode() });
       });
   }
 
   /**
-   * Generates a harmonious color palette using HSL color theory
+   * Requests a theme from the API and keeps the last valid theme as fallback.
    */
-  generatePalette(): void {
-    const { theme } = generateTheme({ mode: this.themeMode() });
-    this.currentTheme.set(theme);
+  async generatePalette(params: ThemeApiRequest = {}): Promise<boolean> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+
+    this.loadingState.set(true);
+    this.errorState.set(null);
+
+    try {
+      const response = await this.themeApi.createTheme({
+        mode: this.themeMode(),
+        ...params,
+      });
+
+      this.currentTheme.set(response.theme);
+      this.currentMeta.set(response.meta);
+      this.setThemeMode(response.meta.mode);
+      this.persistTheme(response);
+      this.updateCSSVariables();
+
+      return true;
+    } catch (error) {
+      this.errorState.set(this.toFriendlyError(error));
+      return false;
+    } finally {
+      this.loadingState.set(false);
+    }
   }
 
   /**
    * Toggles between light and dark theme modes
    */
-  toggleThemeMode(): void {
+  async toggleThemeMode(): Promise<boolean> {
     const newMode = this.themeMode() === "light" ? "dark" : "light";
     this.setThemeMode(newMode);
+    return this.generatePalette({ mode: newMode });
   }
 
   /**
@@ -103,7 +161,7 @@ export default class ColorPalette {
     root.style.setProperty("--fg", hexToRgb(theme.fg));
 
     // Helper to set color and contrast
-    const setScaleVars = (name: string, scale: any) => {
+    const setScaleVars = (name: string, scale: ColorScale) => {
       // Set DEFAULT and its contrast
       root.style.setProperty(`--${name}`, hexToRgb(scale.DEFAULT));
       const defaultContrast =
@@ -112,20 +170,16 @@ export default class ColorPalette {
           : "#000000";
       root.style.setProperty(`--${name}-contrast`, hexToRgb(defaultContrast));
 
-      // Iterating through all shades 50-950
-      Object.keys(scale).forEach((key) => {
-        if (key !== "DEFAULT" && key !== "foreground") {
-          const hex = scale[key];
-          root.style.setProperty(`--${name}-${key}`, hexToRgb(hex));
+      COLOR_SCALE_SHADES.forEach((key) => {
+        const hex = scale[key];
+        root.style.setProperty(`--${name}-${key}`, hexToRgb(hex));
 
-          // Calculate and set contrast for this specific shade
-          const contrast =
-            calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
-          root.style.setProperty(
-            `--${name}-${key}-contrast`,
-            hexToRgb(contrast),
-          );
-        }
+        const contrast =
+          calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
+        root.style.setProperty(
+          `--${name}-${key}-contrast`,
+          hexToRgb(contrast),
+        );
       });
     };
 
@@ -203,6 +257,50 @@ export default class ColorPalette {
     return `oklab(${oklab.l.toFixed(3)} ${oklab.a.toFixed(3)} ${oklab.b.toFixed(
       3,
     )})`;
+  }
+
+  private restoreCachedTheme(): boolean {
+    try {
+      const raw = window.localStorage.getItem(this.storageKey);
+
+      if (!raw) {
+        return false;
+      }
+
+      const cached = JSON.parse(raw) as Partial<CachedTheme>;
+
+      if (!cached.theme || !cached.meta) {
+        return false;
+      }
+
+      this.currentTheme.set(cached.theme);
+      this.currentMeta.set(cached.meta);
+      this.setThemeMode(cached.meta.mode);
+      this.updateCSSVariables();
+      return true;
+    } catch {
+      window.localStorage.removeItem(this.storageKey);
+      return false;
+    }
+  }
+
+  private persistTheme(response: CachedTheme): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      this.storageKey,
+      JSON.stringify({
+        theme: response.theme,
+        meta: response.meta,
+      }),
+    );
+  }
+
+  private toFriendlyError(error: unknown): string {
+    const reason = error instanceof Error ? error.message : "Unknown error.";
+    return `Could not load a fresh theme from the API. Keeping the last valid palette. ${reason}`;
   }
 
   /**

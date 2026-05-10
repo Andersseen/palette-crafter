@@ -4,13 +4,7 @@ import {
   calculateContrast,
   hexToHsl,
 } from "./utils";
-import type { Theme, ThemeMode } from "./types";
-
-export type HarmonyType =
-  | "analogous"
-  | "complementary"
-  | "split-complementary"
-  | "triadic";
+import type { HarmonyType, Theme, ThemeMode } from "./types";
 
 export interface ThemeGenerationOptions {
   mode?: ThemeMode;

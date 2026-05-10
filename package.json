@@ -30,7 +30,7 @@
   },
   "homepage": "https://palette-crafter-psi.vercel.app",
   "scripts": {
-    "dev": "ng serve",
+    "dev": "CHOKIDAR_USEPOLLING=true ng serve",
     "start": "pnpm dev",
     "clean": "rm -rf dist .angular/cache",
     "build": "ng build",

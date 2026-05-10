@@ -42,3 +42,30 @@ export interface ColorSwatchType {
 }
 
 export type ThemeMode = "light" | "dark";
+
+export type HarmonyType =
+  | "analogous"
+  | "complementary"
+  | "split-complementary"
+  | "triadic";
+
+export interface ThemeApiRequest {
+  mode?: ThemeMode;
+  seed?: number | string;
+  baseHue?: number;
+  harmony?: HarmonyType;
+}
+
+export interface ThemeApiMeta {
+  mode: ThemeMode;
+  baseHue: number;
+  secondaryHue: number;
+  harmony: HarmonyType;
+  seeded: boolean;
+}
+
+export interface ThemeApiResponse {
+  ok: true;
+  theme: Theme;
+  meta: ThemeApiMeta;
+}

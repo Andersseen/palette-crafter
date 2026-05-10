@@ -37,6 +37,7 @@ import { hexToRgb } from "@shared/utils";
       <div class="blend-contrast flex min-h-screen flex-col">
         <app-header
           [isDarkMode]="isDarkMode()"
+          [isLoading]="isLoading()"
           (toggleThemeMode)="toggleThemeMode($event)"
         />
 
@@ -45,8 +46,26 @@ import { hexToRgb } from "@shared/utils";
         >
           <app-hero-section
             [isDarkMode]="isDarkMode()"
+            [isLoading]="isLoading()"
             (generatePalette)="generatePalette($event)"
           />
+
+          @if (themeError(); as message) {
+            <div
+              class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm shadow-sm"
+              role="alert"
+            >
+              <p class="opacity-80">{{ message }}</p>
+              <button
+                class="inline-flex shrink-0 items-center justify-center rounded-md border border-foreground/20 px-3 py-2 font-medium hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                [disabled]="isLoading()"
+                (click)="retryTheme()"
+              >
+                Retry
+              </button>
+            </div>
+          }
 
           <!-- Base Colors (Bg/Fg) -->
           <section class="mb-8 sm:mb-12">
@@ -105,6 +124,8 @@ export default class Home {
   overlay = viewChild<ElementRef<HTMLElement>>("overlay");
 
   isDarkMode = computed(() => this.colorService.mode() === "dark");
+  isLoading = computed(() => this.colorService.isLoading());
+  themeError = computed(() => this.colorService.error());
 
   // Split swatches
   baseSwatches = computed(() => {
@@ -117,15 +138,22 @@ export default class Home {
   secondaryScale = computed(() => this.colorService.theme().secondary);
 
   constructor() {
-    this.colorService.generatePalette();
-    this.colorService.updateCSSVariables();
+    void this.colorService.generatePalette({ seed: "palette-crafter-home" });
   }
 
-  generatePalette(ev?: MouseEvent): void {
+  async generatePalette(ev?: MouseEvent): Promise<void> {
+    if (this.isLoading()) {
+      return;
+    }
+
     this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
     this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
-    this.colorService.generatePalette();
-    this.colorService.updateCSSVariables();
+    const updated = await this.colorService.generatePalette();
+
+    if (!updated) {
+      return;
+    }
+
     this.overlay()!.nativeElement.style.background = `rgba(${hexToRgb(
       this.colorService.theme().primary.DEFAULT,
     )} / 0.2)`;
@@ -135,12 +163,18 @@ export default class Home {
       this.root.classList.remove("theme-generate-animating");
     }, 300);
   }
-  toggleThemeMode(ev?: MouseEvent): void {
-    this.colorService.toggleThemeMode();
-    this.colorService.generatePalette();
+  async toggleThemeMode(ev?: MouseEvent): Promise<void> {
+    if (this.isLoading()) {
+      return;
+    }
 
     this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
     this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
+    const updated = await this.colorService.toggleThemeMode();
+
+    if (!updated) {
+      return;
+    }
 
     this.overlay()!.nativeElement.style.background = `rgb(${hexToRgb(
       this.colorService.theme().bg,
@@ -156,5 +190,9 @@ export default class Home {
 
   updateActiveColor(type: "primary" | "secondary", shade: string): void {
     this.colorService.updateActiveShade(type, shade);
+  }
+
+  retryTheme(): void {
+    void this.colorService.generatePalette();
   }
 }
