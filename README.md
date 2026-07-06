@@ -193,6 +193,10 @@ Returns `400` for invalid params, for example:
 - `src/shared/theme-generator.ts`: shared theme generation logic used by UI and API.
 - `src/services/color-palette.ts`: frontend state/service that consumes shared generator.
 
+## For AI Agents
+
+If you're an AI model/agent working in this repo, start at [AGENTS.md](./AGENTS.md) — it points to project context, current state, and repo-specific conventions in `docs/`.
+
 ## Cloudflare Pages Deployment
 
 1. Login once locally:
