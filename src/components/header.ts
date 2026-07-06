@@ -10,7 +10,7 @@ import ThemeSwitcher from "./theme-switcher";
           class="flex flex-col sm:flex-row items-center sm:justify-between gap-4 sm:gap-0"
         >
           <div class="w-full sm:w-auto text-center sm:text-left">
-            <h1 class="text-2xl sm:text-4xl font-bold">Palette Crafter</h1>
+            <h1 class="text-2xl sm:text-4xl font-bold">Palette Forge</h1>
             <p class="text-base sm:text-lg opacity-70 mt-1 sm:mt-2">
               Generate cohesive four-color themes instantly
             </p>

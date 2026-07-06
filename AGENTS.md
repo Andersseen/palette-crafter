@@ -1,21 +1,21 @@
-# Guía para agentes / modelos de IA
+# Guide for agents / AI models
 
-Este archivo es el punto de entrada para cualquier modelo o herramienta de IA que trabaje en este repo (Claude Code, Cursor, Codex, etc.). Es intencionalmente corto — la profundidad vive en `docs/`.
+This file is the entry point for any AI model or tool working on this repo (Claude Code, Cursor, Codex, etc.). It is intentionally short — the depth lives in `docs/`.
 
-## Lee en este orden
+## Read in this order
 
-1. [docs/CONTEXT.md](./docs/CONTEXT.md) — qué es este proyecto, para quién existe, qué busca lograr. Léelo si es tu primera vez aquí.
-2. [docs/STATE.md](./docs/STATE.md) — foto del estado actual: qué funciona, qué falta, qué está roto. Pégalo al inicio de una sesión nueva si necesitas contexto rápido sin re-explorar todo el repo.
-3. [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) — reglas duras de este repo y por qué existen (romperlas rompe SSR, la API pública, o la paridad entre playground y API).
-4. [docs/specs/README.md](./docs/specs/README.md) — antes de implementar una feature no trivial, escribe un spec con la plantilla de `docs/specs/TEMPLATE.md`. Un fix de una línea no lo necesita; una feature nueva o un cambio de contrato de la API sí.
+1. [docs/CONTEXT.md](./docs/CONTEXT.md) — what this project is, who it exists for, what it aims to achieve. Read it if this is your first time here.
+2. [docs/STATE.md](./docs/STATE.md) — snapshot of the current state: what works, what's missing, what's broken. Paste it at the start of a new session if you need quick context without re-exploring the whole repo.
+3. [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) — hard rules of this repo and why they exist (breaking them breaks SSR, the public API, or the playground/API parity).
+4. [docs/specs/README.md](./docs/specs/README.md) — before implementing a non-trivial feature, write a spec using the template in `docs/specs/TEMPLATE.md`. A one-line fix doesn't need one; a new feature or an API contract change does.
 
-## Lo mínimo indispensable si no vas a leer nada más
+## The bare minimum if you won't read anything else
 
-- `src/shared/` (generador de color) lo usan **a la vez** el cliente Angular y el endpoint de la API — no le metas nada de Angular/DOM ahí, y cualquier cambio de algoritmo afecta a los dos consumidores.
-- Mismo `seed` en `/api/v1/theme` debe devolver siempre el mismo resultado — es un contrato público, no lo cambies en silencio.
-- No hay tests corriendo de verdad ni linter configurado todavía (ver STATE.md) — no asumas comandos estándar como `pnpm test` o `pnpm lint`, verifica primero.
-- `@voltui/components` es una librería externa (repo hermano `volt-ui`, versión 0.1.0) — no la modifiques desde aquí.
+- `src/shared/` (the color generator) is used **simultaneously** by the Angular client and the API endpoint — don't put anything Angular/DOM-specific in there, and any algorithm change affects both consumers at once.
+- The same `seed` on `/api/v1/theme` must always return the same result — it's a public contract, don't change it silently.
+- There are no working tests and no linter configured yet (see STATE.md) — don't assume standard commands like `pnpm test` or `pnpm lint`; verify first.
+- `@voltui/components` is an external library (sibling repo `volt-ui`, version 0.1.0) — don't modify it from here.
 
-## Actualiza estos documentos cuando corresponda
+## Keep these documents up to date
 
-Si tu cambio altera algo descrito en `docs/STATE.md` (una feature nueva, un test que ahora sí existe, un fix de las inconsistencias listadas), actualiza ese archivo como parte del mismo cambio. Un documento de estado desactualizado es peor que no tener ninguno.
+If your change alters anything described in `docs/STATE.md` (a new feature, a test that now exists, a fix for one of the listed inconsistencies), update that file as part of the same change. An outdated state document is worse than having none.

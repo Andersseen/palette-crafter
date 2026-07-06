@@ -50,7 +50,7 @@ export default class ColorPalette {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly themeApi = inject(ThemeApiClient);
-  private readonly storageKey = "palette-crafter:last-theme";
+  private readonly storageKey = "palette-forge:last-theme";
 
   private currentTheme = signal<Theme>({
     bg: "#ffffff",

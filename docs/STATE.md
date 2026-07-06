@@ -1,55 +1,57 @@
-# Estado actual — Palette Crafter
+# Current state — Palette Forge
 
-> Snapshot pensado para pegarse al principio de una sesión nueva (con cualquier modelo/herramienta) cuando no hay tiempo de que lea todo el repo. Actualízalo cuando termines un cambio relevante — si no, miente y confunde más que ayuda.
+> Snapshot meant to be pasted at the start of a new session (with any model/tool) when there's no time for it to read the whole repo. Update it when you finish a relevant change — otherwise it lies and confuses more than it helps.
 >
-> Última actualización: 2026-07-06 (basado en el commit `d384fcf`, rama `main`, working tree limpio).
+> Last updated: 2026-07-06 (commit `e17a23d` + uncommitted rename to `palette-forge`, branch `main`; claims verified against the source code on that date).
 
-## Resumen en una frase
+## One-sentence summary
 
-App Angular 21 + AnalogJS que genera paletas de color deterministas y accesibles, servidas tanto en un playground visual (`/`) como en una API HTTP (`/api/v1/theme`), deployada en Cloudflare Pages.
+Angular 21 + AnalogJS app that generates deterministic, accessible color palettes, served both in a visual playground (`/`) and an HTTP API (`/api/v1/theme`), deployed on Cloudflare Pages.
 
-## Qué existe y funciona
+## What exists and works
 
-- **Motor de generación** (`src/shared/theme-generator.ts` + `utils.ts` + `types.ts`): puro TypeScript, sin dependencias de Angular ni del DOM. Genera hue base + armonía (analogous/complementary/split-complementary/triadic), escalas 50–950 + `DEFAULT` + `foreground` para `primary`/`secondary`/`status.{info,success,warning,danger}`, y ajusta el foreground hasta cumplir contraste WCAG ≥ 4.5:1. Con `seed` es determinista (PRNG `mulberry32`); sin `seed`, usa `Math.random`.
-- **API** (`src/server/routes/api/v1/theme.ts`, h3/Nitro vía AnalogJS): `GET` y `POST` en `/api/v1/theme`. Valida `mode` (`light`/`dark`), `harmony` (4 valores), `baseHue` (0–360) y responde `400` si algo es inválido, `405` si el método no es GET/POST. Documentado con ejemplos `curl` en el [README](../README.md).
-- **Servicio de estado del cliente** (`src/services/color-palette.ts`, Angular signal-based, `providedIn: root`): pide el tema a la API vía `ThemeApiClient`, cachea el último tema válido en `localStorage` (`palette-crafter:last-theme`), detecta `prefers-color-scheme` del sistema, aplica todo como CSS custom properties en `documentElement` (`--primary`, `--primary-50`, `--primary-foreground`, `--primary-contrast`, etc.), y genera el bloque Tailwind v4 `@theme {...}` para exportar.
-- **UI** (`src/components/*.ts` + `src/app/pages/(home).page.ts`): header, hero, preview de tema, swatches, escalas de color, panel de export (copia `@theme` al portapapeles), drawer de "Theme Options" (modo single/scale por token, toggle de colores de estado) construido con `@voltui/components`.
-- **SSR + hidratación**: zoneless (`provideZonelessChangeDetection`), `provideClientHydration(withEventReplay())`, guardas `isPlatformBrowser` alrededor de todo acceso a `window`/`document`/`localStorage`.
-- **Deploy**: Cloudflare Pages vía Wrangler. `pnpm build:cf` → `pnpm deploy:cf`. GitHub Action (`.github/workflows/deploy-cloudflare.yml`) despliega automáticamente en push a `main` (requiere secrets `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`).
+- **Generation engine** (`src/shared/theme-generator.ts` + `utils.ts` + `types.ts`): pure TypeScript, no Angular or DOM dependencies. Generates base hue + harmony (analogous/complementary/split-complementary/triadic), 50–950 scales + `DEFAULT` + `foreground` for `primary`/`secondary`/`status.{info,success,warning,danger}`. Mind the accessibility nuance: the global background/text pair is adjusted iteratively until WCAG contrast ≥ 4.5:1 (`ensureAccessibleForeground`), but each scale's `foreground` is a binary choice (white if it reaches ≥ 4.5:1 against the `DEFAULT`; otherwise black **without re-verifying** that black passes). With a `seed` it's deterministic (`mulberry32` PRNG); without a `seed`, it uses `Math.random`.
+- **API** (`src/server/routes/api/v1/theme.ts`, h3/Nitro via AnalogJS): `GET` and `POST` on `/api/v1/theme`. Validates `mode` (`light`/`dark`), `harmony` (4 values), `baseHue` (0–360) and responds `400` if anything is invalid, `405` if the method isn't GET/POST. Documented with `curl` examples in the [README](../README.md).
+- **Client state service** (`src/services/color-palette.ts`, Angular signal-based, `providedIn: root`): requests the theme from the API via `ThemeApiClient` (always `POST`; the base URL comes from `THEME_API_BASE_URL`/`VITE_THEME_API_BASE_URL` if defined — see `envPrefix` in `vite.config.ts` — otherwise same-origin), caches the last valid theme in `localStorage` (`palette-forge:last-theme`), detects the system's `prefers-color-scheme`, applies everything as CSS custom properties on `documentElement` (`--primary`, `--primary-50`, `--primary-foreground`, `--primary-contrast`, etc.), and generates the Tailwind v4 `@theme {...}` block for export.
+- **UI** (`src/components/*.ts` + `src/app/pages/(home).page.ts`): header, hero, theme preview, swatches, color scales, export panel (copies `@theme` to clipboard), "Theme Options" drawer (single/scale mode per token, status colors toggle) built with `@voltui/components`.
+- **SSR + hydration**: zoneless (`provideZonelessChangeDetection`), `provideClientHydration(withEventReplay())`, `isPlatformBrowser` guards around every access to `window`/`document`/`localStorage`. The `/` route is prerendered at build time (`prerender.routes` in `vite.config.ts`).
+- **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`. A GitHub Action (`.github/workflows/deploy-cloudflare.yml`) deploys automatically on push to `main` (requires the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets).
 
-## Qué falta / está roto (no asumir que funciona)
+## What's missing / broken (don't assume it works)
 
-- **No hay tests reales.** `vite.config.ts` configura Vitest (`jsdom`, `include: ["**/*.spec.ts"]`, `setupFiles: ["src/test-setup.ts"]`) pero **`src/test-setup.ts` no existe** y **no hay ningún archivo `*.spec.ts` en el repo**. Además `package.json` no tiene script `test`. Si vas a añadir tests, primero hay que crear ese setup file y decidir cómo correrlos (`vitest` directo, ya que no hay script wrapper).
-- **No hay linter ni formatter configurado.** No hay `.eslintrc`/`eslint.config.*` ni `.prettierrc` en el repo. El estilo de código actual es el único "contrato" — imítalo por consistencia, no inventes reglas nuevas de formato.
-- **Inconsistencias de nombres/branding** (no crítico, pero puede confundir): `package.json.name` = `palette-crafter`, `wrangler.jsonc.name` = `palette-crafter`, `homepage` en `package.json` apunta a una URL de **Vercel** (`palette-crafter-psi.vercel.app`) que probablemente ya no es el deploy real (el deploy activo es Cloudflare Pages según README + workflow), y la carpeta local del repo se llama `palette-forge`. Si tocas cualquiera de estos campos, confirma con el usuario cuál es el nombre/URL "canónico" actual antes de asumir uno.
-- **Una sola página real**: `src/app/pages/(home).page.ts` es la única ruta de contenido (AnalogJS file-based routing). No hay rutas adicionales todavía.
+- **No real tests.** `vite.config.ts` configures Vitest (`jsdom`, `include: ["**/*.spec.ts"]`, `setupFiles: ["src/test-setup.ts"]`) but **`src/test-setup.ts` does not exist** and **there is no `*.spec.ts` file in the repo**. Also `package.json` has no `test` script. If you're going to add tests, first create that setup file and decide how to run them (`vitest` directly, since there's no script wrapper).
+- **No linter or formatter configured.** There's no `.eslintrc`/`eslint.config.*` or `.prettierrc` in the repo. The current code style is the only "contract" — imitate it for consistency, don't invent new formatting rules.
+- **Naming/branding unified to `palette-forge` (2026-07-06)**: `package.json` (name, repository, bugs, homepage → `https://palette-forge.pages.dev`), `wrangler.jsonc`, `angular.json`, the HTML title, the UI `<h1>` and the `localStorage` key already use `palette-forge` / "Palette Forge"; the GitHub repo is `Andersseen/palette-forge` and the canonical deploy is Cloudflare Pages (the old Vercel URL was dropped). Two deliberate leftovers:
+  1. Renaming `wrangler.jsonc.name` means the next deploy targets a Cloudflare Pages project named `palette-forge` — it must be created once (`wrangler pages project create palette-forge --production-branch=main`) or the CI deploy fails; the old `palette-crafter` project keeps existing on Cloudflare until it's deleted manually.
+  2. The home page seed is still `"palette-crafter-home"` (`src/app/pages/(home).page.ts`) **on purpose**: changing the seed string would change the page's default colors (the seed determines the output — see CONVENTIONS.md #2).
+- **A single real page**: `src/app/pages/(home).page.ts` is the only content route (AnalogJS file-based routing). No additional routes yet.
 
-## Arquitectura en 30 segundos
+## Architecture in 30 seconds
 
 ```
-src/shared/           → lógica pura (color math, generador de tema). La usan API y potencialmente el cliente. Sin imports de Angular/DOM.
-src/server/routes/    → endpoints h3/Nitro (AnalogJS API routes). Hoy: api/v1/theme.ts
-src/services/         → estado Angular (signals) + cliente HTTP hacia la API
-src/components/       → componentes Angular standalone de UI
-src/app/pages/        → rutas file-based de AnalogJS
+src/shared/           → pure logic (color math, theme generator). Used by the API and potentially the client. No Angular/DOM imports.
+src/server/routes/    → h3/Nitro endpoints (AnalogJS API routes). Today: api/v1/theme.ts
+src/services/         → Angular state (signals) + HTTP client towards the API
+src/components/       → standalone Angular UI components
+src/app/pages/        → AnalogJS file-based routes
 ```
 
-Flujo real: usuario interactúa con la UI → `ColorPalette` (servicio) llama a `ThemeApiClient` → petición HTTP a `/api/v1/theme` → handler h3 valida y llama a `generateTheme` (shared) → respuesta → `ColorPalette` actualiza signals + CSS vars + localStorage.
+Actual flow: user interacts with the UI → `ColorPalette` (service) calls `ThemeApiClient` → HTTP request to `/api/v1/theme` → h3 handler validates and calls `generateTheme` (shared) → response → `ColorPalette` updates signals + CSS vars + localStorage.
 
-## Historial reciente (contexto, no para re-derivar con `git log` cada vez)
+## Recent history (context, so you don't re-derive it with `git log` every time)
 
-Ramas recientes mergeadas a `main`: `feature/home`, `feature/angular-ssr`, `feature/api`. En ese orden se construyó: UI base → SSR/hidratación → generación de temas vía API + integración de `@voltui/components`. El trabajo avanza en commits pequeños tipo `feat(): ...` sin cuerpo largo — sigue ese estilo si commiteas.
+Recent branches merged into `main`: `feature/home`, `feature/angular-ssr`, `feature/api`. In that order the project was built: base UI → SSR/hydration → theme generation via API + `@voltui/components` integration. Work moves in small commits like `feat(): ...` without long bodies — follow that style if you commit.
 
-## Cómo correr el proyecto
+## How to run the project
 
 ```bash
 pnpm install
 pnpm dev            # http://localhost:4200
-pnpm build:cf && pnpm dev:cf   # preview con preset Cloudflare Pages
+pnpm build:cf && pnpm dev:cf   # preview with the Cloudflare Pages preset
 ```
 
-## Documentos relacionados
+## Related documents
 
-- [CONTEXT.md](./CONTEXT.md) — por qué existe el proyecto, para quién, qué se busca lograr.
-- [CONVENTIONS.md](./CONVENTIONS.md) — reglas concretas de este repo.
-- [specs/README.md](./specs/README.md) — proceso para especificar features antes de codear.
+- [CONTEXT.md](./CONTEXT.md) — why the project exists, who it's for, what it aims to achieve.
+- [CONVENTIONS.md](./CONVENTIONS.md) — concrete rules of this repo.
+- [specs/README.md](./specs/README.md) — process for speccing features before coding.

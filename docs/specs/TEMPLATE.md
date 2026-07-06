@@ -2,35 +2,35 @@
 status: draft # draft | approved | in-progress | done
 ---
 
-# <Nombre de la feature/cambio>
+# <Name of the feature/change>
 
-## Problema
+## Problem
 
-<Qué no se puede hacer hoy, o qué está mal, descrito desde la perspectiva de quien usa el playground o la API. Nada de detalles de implementación acá.>
+<What can't be done today, or what's wrong, described from the perspective of whoever uses the playground or the API. No implementation details here.>
 
-## Objetivo
+## Goal
 
-<Qué se busca lograr con este cambio. 1-3 bullets.>
+<What this change aims to achieve. 1-3 bullets.>
 
-## No-objetivo (fuera de alcance)
+## Non-goal (out of scope)
 
-<Qué queda explícitamente fuera, aunque esté relacionado. Esto evita que el scope crezca a mitad de implementación.>
+<What is explicitly left out, even if related. This prevents scope creep mid-implementation.>
 
-## Diseño
+## Design
 
-<Qué archivos/módulos toca. Si agrega un endpoint, tipo, o prop nueva, escribe la forma exacta (firma de función, forma del JSON, props del componente). Si cambia un archivo en `src/shared/`, dilo explícitamente — afecta a la API y al cliente a la vez (ver CONVENTIONS.md #1).>
+<Which files/modules it touches. If it adds an endpoint, type, or new prop, write the exact shape (function signature, JSON shape, component props). If it changes a file in `src/shared/`, say so explicitly — it affects the API and the client at the same time (see CONVENTIONS.md #1).>
 
-## Impacto en contratos existentes
+## Impact on existing contracts
 
-- ¿Cambia la forma de la respuesta de `/api/v1/theme`? <sí/no + detalle>
-- ¿Cambia el resultado para un `seed` que ya existía (determinismo)? <sí/no + detalle — ver CONVENTIONS.md #2>
-- ¿Agrega/renombra una CSS custom property? <sí/no + detalle — debe seguir el patrón de CONVENTIONS.md #3>
+- Does the `/api/v1/theme` response shape change? <yes/no + detail>
+- Does the result change for a `seed` that already existed (determinism)? <yes/no + detail — see CONVENTIONS.md #2>
+- Does it add/rename a CSS custom property? <yes/no + detail — must follow the pattern in CONVENTIONS.md #3>
 
-## Criterios de aceptación
+## Acceptance criteria
 
-- [ ] <criterio verificable 1>
-- [ ] <criterio verificable 2>
+- [ ] <verifiable criterion 1>
+- [ ] <verifiable criterion 2>
 
-## Fuera de alcance / follow-ups
+## Out of scope / follow-ups
 
-<Qué se deja para un spec futuro.>
+<What is left for a future spec.>

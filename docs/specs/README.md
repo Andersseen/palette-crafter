@@ -1,37 +1,37 @@
-# Spec-driven development en este repo
+# Spec-driven development in this repo
 
-> Objetivo: que un modelo (o persona) menos familiarizado con el proyecto no empiece a escribir código antes de que quede claro **qué** se va a construir, **por qué**, y **cómo se sabe que quedó bien**. Esto es deliberadamente ligero — no es un proceso corporativo, es una checklist de 10 minutos que evita retrabajo.
+> Goal: a model (or person) less familiar with the project should not start writing code before it's clear **what** is going to be built, **why**, and **how we know it's done right**. This is deliberately lightweight — it's not a corporate process, it's a 10-minute checklist that prevents rework.
 
-## Cuándo escribir un spec
+## When to write a spec
 
-Escribe un spec en `docs/specs/<slug>.md` **antes** de tocar código cuando el cambio sea:
+Write a spec in `docs/specs/<slug>.md` **before** touching code when the change is:
 
-- una feature nueva (endpoint nuevo, componente nuevo, opción nueva en el playground),
-- un cambio de contrato de la API (`/api/v1/theme`: parámetros, forma de la respuesta, códigos de error),
-- un cambio al algoritmo de generación de color (`src/shared/theme-generator.ts` / `utils.ts`) que altere resultados existentes,
-- un cambio de arquitectura (mover carpetas, cambiar cómo se comunican cliente/servidor, añadir una dependencia grande).
+- a new feature (new endpoint, new component, new playground option),
+- an API contract change (`/api/v1/theme`: parameters, response shape, error codes),
+- a change to the color generation algorithm (`src/shared/theme-generator.ts` / `utils.ts`) that alters existing outputs,
+- an architecture change (moving folders, changing how client/server communicate, adding a large dependency).
 
-**No** hace falta spec para: un fix de un bug puntual, un ajuste de estilos/Tailwind, una corrección de copy/texto, o un refactor interno que no cambia comportamiento observable.
+**No** spec is needed for: a one-off bugfix, a styles/Tailwind tweak, a copy/text correction, or an internal refactor with no observable behavior change.
 
-Ante la duda, escribe el spec — es más barato que un cambio a medio camino que hay que deshacer.
+When in doubt, write the spec — it's cheaper than a half-done change that has to be undone.
 
-## Cómo escribir uno
+## How to write one
 
-1. Copia [`TEMPLATE.md`](./TEMPLATE.md) a `docs/specs/<slug-descriptivo>.md` (ej. `docs/specs/api-batch-themes.md`).
-2. Rellena todas las secciones. Si una sección no aplica, escribe "N/A" y por qué, no la borres — la ausencia deliberada es información.
-3. Si estás implementando para otra persona/proceso (no para ti mismo en la misma sesión), **para y espera aprobación del spec** antes de escribir código. Si estás resolviendo un pedido directo en la misma conversación, puedes seguir directo a implementar una vez el spec está completo y es coherente con [CONTEXT.md](../CONTEXT.md) y [CONVENTIONS.md](../CONVENTIONS.md).
-4. Implementa siguiendo el spec. Si durante la implementación el spec resulta estar mal o incompleto, **actualiza el spec primero**, no improvises en silencio.
-5. Cuando la feature esté implementada y mergeada, mueve el archivo a `docs/specs/done/` (mismo nombre) como registro histórico. No lo borres — sirve para entender decisiones pasadas sin tener que arqueologizar el `git log`.
+1. Copy [`TEMPLATE.md`](./TEMPLATE.md) to `docs/specs/<descriptive-slug>.md` (e.g. `docs/specs/api-batch-themes.md`).
+2. Fill in every section. If a section doesn't apply, write "N/A" and why — don't delete it; deliberate absence is information.
+3. If you're implementing for someone else / another process (not for yourself in the same session), **stop and wait for spec approval** before writing code. If you're resolving a direct request in the same conversation, you may proceed straight to implementation once the spec is complete and consistent with [CONTEXT.md](../CONTEXT.md) and [CONVENTIONS.md](../CONVENTIONS.md).
+4. Implement following the spec. If during implementation the spec turns out to be wrong or incomplete, **update the spec first** — don't improvise silently.
+5. When the feature is implemented and merged, move the file to `docs/specs/done/` (same name) as a historical record. Don't delete it — it helps understand past decisions without archaeology in the `git log`.
 
-## Qué va en un spec (resumen — ver el template para el detalle)
+## What goes in a spec (summary — see the template for detail)
 
-- **Problema**: qué no se puede hacer hoy, o qué está mal, en términos del usuario/consumidor de la API — no en términos de código.
-- **Objetivo / No-objetivo**: qué sí se busca resolver y qué explícitamente se deja fuera.
-- **Diseño**: qué archivos toca, qué contratos cambian (tipos, forma de la respuesta de la API, props de un componente).
-- **Impacto en el contrato de la API / determinismo**: si aplica, dilo explícitamente (ver regla 2 de [CONVENTIONS.md](../CONVENTIONS.md)).
-- **Criterios de aceptación**: lista verificable, no ambigua ("el endpoint devuelve 400 si `harmony` no es uno de los 4 valores válidos", no "la validación funciona bien").
-- **Fuera de alcance**: qué queda explícitamente para después.
+- **Problem**: what can't be done today, or what's wrong, in terms of the user / API consumer — not in terms of code.
+- **Goal / Non-goal**: what this aims to solve and what is explicitly left out.
+- **Design**: which files it touches, which contracts change (types, API response shape, component props).
+- **Impact on the API contract / determinism**: if applicable, say it explicitly (see rule 2 in [CONVENTIONS.md](../CONVENTIONS.md)).
+- **Acceptance criteria**: a verifiable, unambiguous list ("the endpoint returns 400 if `harmony` is not one of the 4 valid values", not "validation works well").
+- **Out of scope**: what is explicitly left for later.
 
-## Specs existentes
+## Existing specs
 
-- `done/` — specs de features ya implementadas (vacío por ahora; este sistema se creó retroactivamente sobre un proyecto ya en marcha, así que el trabajo previo a esta fecha no tiene spec escrito — ver [STATE.md](../STATE.md) para el resumen de lo ya construido).
+- `done/` — specs for features already implemented (empty for now; this system was created retroactively on a project already in motion, so work prior to that date has no written spec — see [STATE.md](../STATE.md) for a summary of what's already built).

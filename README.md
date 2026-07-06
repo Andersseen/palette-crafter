@@ -1,6 +1,6 @@
-# Palette Crafter
+# Palette Forge
 
-Palette Crafter is an Angular + AnalogJS app for generating harmonious UI themes.
+Palette Forge is an Angular + AnalogJS app for generating harmonious UI themes.
 
 It has two core goals:
 
