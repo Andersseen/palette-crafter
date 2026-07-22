@@ -172,3 +172,37 @@
 .palette-overlay[data-revealing="true"] {
   opacity: 1;
 }
+
+/*
+ * Theme switch via the View Transitions API.
+ *
+ * The default cross-fade is replaced by a hard stack: the old paint stays put
+ * while the new one is clipped in from the click point (the clip itself is
+ * animated in ThemeReveal). Without `animation: none` the browser also
+ * cross-fades, which muddies the wipe into a grey blur.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* The reveal replaces scroll-anchoring jitter during the snapshot. */
+html[data-theme-transition="true"] {
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}

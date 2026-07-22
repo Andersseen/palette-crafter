@@ -376,11 +376,21 @@ export default class Home {
       return;
     }
 
-    await this.reveal.run(this.overlayMotion(), this.overlay(), {
-      color: pending.theme.bg,
-      origin: this.reveal.originOf(ev),
-      commit: () => this.colorService.commit(pending),
-    });
+    const origin = this.reveal.originOf(ev);
+    const commit = () => this.colorService.commit(pending);
+
+    // Preferred path: the new theme is clipped in over the old one, so the UI
+    // is never blanked. Falls back to the colour overlay where the View
+    // Transitions API is missing.
+    const revealed = await this.reveal.revealWithViewTransition(commit, origin);
+
+    if (!revealed) {
+      await this.reveal.run(this.overlayMotion(), this.overlay(), {
+        color: pending.theme.bg,
+        origin,
+        commit,
+      });
+    }
   }
 
   updateActiveColor(type: BrandToken, shade: string): void {

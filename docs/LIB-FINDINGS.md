@@ -160,13 +160,34 @@ Two rough edges:
   in `try/finally` for that reason; it deserves a documented contract, since
   "cancelled" is a normal outcome when a user clicks twice.
 
-### 3. Duration cannot be varied per imperative `play()` call
+### 3. Cannot animate pseudo-elements, which rules out View Transitions
+
+The theme switch needs the old and new pages on screen at the same time. Only
+the View Transitions API can do that, and driving it means animating
+`::view-transition-new(root)` — a pseudo-element:
+
+```ts
+root.animate({ clipPath: [...] }, { pseudoElement: "::view-transition-new(root)" });
+```
+
+Every movement directive resolves a real `ElementRef` and calls `.animate()` on
+it, so this is out of reach and the app drops to raw WAAPI for that one effect.
+Worth considering: an escape hatch on the engine (a `pseudoElement` option, or
+an imperative `animate(target, frames, options)` that accepts one) would keep
+motion configuration in one place instead of forcing a split.
+
+This matters more than it sounds: the *first* attempt here used a colour overlay
+driven by the library, and it looked wrong — it hides the UI and then snaps it
+back rather than revealing it. Measured frame by frame, the whole interface
+popped into existence in a single frame after the wipe finished.
+
+### 4. Duration cannot be varied per imperative `play()` call
 
 `moveDuration` is a template input, so an imperative caller animating two
 different phases (expand, then fade) is stuck with one duration for both. An
 optional per-call options argument on `play()` would help.
 
-### 4. `MoveInViewDirective` guards SSR properly
+### 5. `MoveInViewDirective` guards SSR properly
 
 Unlike `ng-primitives`, the in-view directive checks `isPlatformBrowser` before
 touching the DOM. The hover/tap directives use Angular `host` listeners rather

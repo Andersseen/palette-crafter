@@ -26,8 +26,12 @@ import type { ColorSwatchType } from "@shared/types";
            a phone; they reappear once there is room for them. -->
       <!-- Row layout lives in a ~280px rail, so it stays to two lines: the
            name and the hex. Longer notations are on the scale cards. -->
+      <!-- p-2.5! because volt-card-content ships its own p-6 pt-0, and Tailwind
+           resolves conflicting utilities by stylesheet order, not by the order
+           they appear in the class attribute — so p-6 silently won and
+           indented every card's contents by 24px. -->
       @if (layout() === "row") {
-        <volt-card-content class="flex items-center gap-2.5 p-2.5">
+        <volt-card-content class="flex items-center gap-2.5 p-2.5!">
           <div
             class="h-9 w-9 shrink-0 rounded-md ring-1 ring-inset ring-foreground/10"
             [style.background-color]="swatch().hex"

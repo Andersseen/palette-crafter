@@ -8,6 +8,15 @@ export interface RevealOrigin {
   y: number;
 }
 
+interface ViewTransition {
+  ready: Promise<void>;
+  finished: Promise<void>;
+}
+
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (callback: () => void) => ViewTransition;
+};
+
 export interface RevealOptions {
   /** Color painted into the overlay while it expands. */
   color: string;
@@ -81,6 +90,78 @@ export default class ThemeReveal {
     }
 
     return { x: event.clientX, y: event.clientY };
+  }
+
+  private get viewTransitions(): boolean {
+    return (
+      this.isBrowser &&
+      typeof (this.document as DocumentWithViewTransition)
+        .startViewTransition === "function"
+    );
+  }
+
+  /**
+   * Sweeps the *new* theme in over the old one.
+   *
+   * A colour overlay can only ever hide the page and then snap it back — the
+   * whole UI popped into existence the moment the circle finished. Revealing
+   * needs two versions of the document on screen at once, which only the View
+   * Transitions API can provide: it snapshots the old paint, we swap the theme,
+   * and the new snapshot is clipped in from the click point while the old one
+   * stays put underneath.
+   *
+   * `element.animate` here targets `::view-transition-new(root)`, a pseudo
+   * element — angular-movement drives real elements, so it cannot express this
+   * one (see docs/LIB-FINDINGS.md).
+   *
+   * Returns false when the browser has no support, so the caller can fall back.
+   */
+  async revealWithViewTransition(
+    commit: () => void,
+    origin?: RevealOrigin,
+    duration = 520,
+  ): Promise<boolean> {
+    if (!this.viewTransitions) {
+      return false;
+    }
+
+    const from = origin ?? this.centre();
+    const { width, height } = this.viewportSize();
+    const radius = this.coveringRadius(from, width, height);
+    const root = this.document.documentElement;
+
+    root.dataset["themeTransition"] = "true";
+
+    const transition = (
+      this.document as DocumentWithViewTransition
+    ).startViewTransition(() => {
+      commit();
+    });
+
+    try {
+      await transition.ready;
+
+      await root.animate(
+        {
+          clipPath: [
+            `circle(0px at ${from.x}px ${from.y}px)`,
+            `circle(${radius}px at ${from.x}px ${from.y}px)`,
+          ],
+        },
+        {
+          duration,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          pseudoElement: "::view-transition-new(root)",
+        },
+      ).finished;
+    } catch {
+      // A second toggle interrupts the transition; the theme is already
+      // committed, so there is nothing to undo.
+    } finally {
+      delete root.dataset["themeTransition"];
+    }
+
+    return true;
   }
 
   async run(
