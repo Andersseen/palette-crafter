@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "palette-forge",
+  // Must match an existing Cloudflare Pages project. `wrangler pages deploy`
+  // cannot create one non-interactively, so a name with no project behind it
+  // fails CI with a bare "exit code 1". Verify with `wrangler pages project list`.
+  "name": "palette-crafter",
   "pages_build_output_dir": "dist/analog/public",
   "compatibility_date": "2026-03-21",
   "compatibility_flags": ["nodejs_compat"],
