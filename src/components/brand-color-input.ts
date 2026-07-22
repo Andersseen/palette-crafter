@@ -15,68 +15,63 @@ import { normalizeHex } from "@shared/utils";
   selector: "app-brand-color-input",
   imports: [VoltButton, VoltInput, VoltLabel, ...MOVEMENT_DIRECTIVES],
   template: `
-    <div
-      class="flex flex-col gap-3 rounded-lg border border-foreground/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div class="flex items-center gap-3">
-        <label
-          class="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-md border border-foreground/20"
-          [style.background-color]="preview()"
-          [title]="'Pick a brand color'"
-        >
-          <input
-            type="color"
-            class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            [value]="preview()"
-            (input)="onPick($event)"
-          />
-          <span class="sr-only">Brand color picker</span>
-        </label>
+    <div class="flex min-w-0 items-center gap-2">
+      <volt-label
+        htmlFor="brand-hex"
+        class="shrink-0 text-[11px] uppercase tracking-wide opacity-50"
+        [error]="isInvalid()"
+      >
+        Brand
+      </volt-label>
 
-        <div class="flex flex-col">
-          <volt-label htmlFor="brand-hex" [error]="isInvalid()">
-            Start from a brand color
-          </volt-label>
-          <span class="text-xs opacity-60">
-            The exact hex is kept in the generated scale.
-          </span>
-        </div>
-      </div>
-
-      <div class="flex w-full items-center gap-2 sm:w-auto">
-        <volt-input
-          id="brand-hex"
-          class="min-w-0 flex-1 font-mono sm:w-32 sm:flex-none"
-          placeholder="#ff6b35"
-          autocomplete="off"
-          [value]="draft()"
-          [attr.aria-invalid]="isInvalid()"
-          (valueChange)="onValue($event)"
-          (keydown.enter)="apply()"
+      <label
+        class="relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/20"
+        [style.background-color]="preview()"
+        title="Pick a brand color"
+      >
+        <input
+          type="color"
+          class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          [value]="preview()"
+          (input)="onPick($event)"
         />
+        <span class="sr-only">Brand color picker</span>
+      </label>
 
+      <volt-input
+        id="brand-hex"
+        class="w-28 min-w-0 font-mono text-xs"
+        placeholder="#ff6b35"
+        autocomplete="off"
+        [value]="draft()"
+        [attr.aria-invalid]="isInvalid()"
+        (valueChange)="onValue($event)"
+        (keydown.enter)="apply()"
+      />
+
+      <volt-button
+        size="sm"
+        variant="outline"
+        class="shrink-0"
+        [disabled]="!canApply()"
+        [moveWhileTap]="{ scale: [1, 0.95] }"
+        (click)="apply()"
+      >
+        Apply
+      </volt-button>
+
+      @if (active()) {
         <volt-button
           size="sm"
+          variant="ghost"
           class="shrink-0"
-          [disabled]="!canApply()"
+          title="Back to generated hues"
           [moveWhileTap]="{ scale: [1, 0.95] }"
-          (click)="apply()"
+          (click)="clear()"
         >
-          Apply
+          Clear
         </volt-button>
-
-        @if (active()) {
-          <volt-button
-            size="sm"
-            variant="outline"
-            class="shrink-0"
-            [moveWhileTap]="{ scale: [1, 0.95] }"
-            (click)="clear()"
-          >
-            Clear
-          </volt-button>
-        }
-      </div>
+      }
     </div>
   `,
 })

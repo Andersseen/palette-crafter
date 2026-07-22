@@ -153,3 +153,22 @@
 #theme-overlay[data-revealing="true"] {
   opacity: 1;
 }
+
+/*
+ * Scoped variant used when generating: covers only the workspace, so the
+ * command bar stays visible and the wipe reads as "the palette changed"
+ * rather than "the page went away".
+ */
+.palette-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 0.75rem;
+  clip-path: circle(0px at 50% 50%);
+}
+
+.palette-overlay[data-revealing="true"] {
+  opacity: 1;
+}

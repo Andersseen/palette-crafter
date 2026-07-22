@@ -49,17 +49,13 @@ import { MOVEMENT_DIRECTIVES } from "angular-movement";
     ...MOVEMENT_DIRECTIVES,
   ],
   template: `
-    <div class="space-y-6 px-2 sm:px-0">
-      <div class="text-center">
-        <h2 class="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">
-          Theme Preview
-        </h2>
-        <p class="text-base sm:text-lg opacity-80">
-          See how your generated palette looks in action
-        </p>
-      </div>
+    <div class="space-y-4">
+      <p class="text-sm opacity-60">
+        The palette applied to real components — the fastest way to spot a
+        primary that is too weak or a foreground that fights its background.
+      </p>
 
-      <div class="grid gap-4 sm:gap-6 lg:grid-cols-2" [moveStagger]="70">
+      <div class="grid gap-4 sm:gap-5 xl:grid-cols-2" [moveStagger]="70">
         <volt-card moveInView="fade-up">
           <volt-card-header>
             <volt-card-title>Buttons</volt-card-title>

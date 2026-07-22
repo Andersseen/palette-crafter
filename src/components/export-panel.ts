@@ -25,11 +25,8 @@ import type { ExportFormat } from "@shared/types";
     ...MOVEMENT_DIRECTIVES,
   ],
   template: `
-    <div class="space-y-3 sm:space-y-4 px-2 sm:px-0">
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 class="text-base sm:text-lg font-semibold">Export</h3>
-        <p class="text-xs sm:text-sm opacity-70">{{ activeFormat().description }}</p>
-      </div>
+    <div class="space-y-3 sm:space-y-4">
+      <p class="text-sm opacity-60">{{ activeFormat().description }}</p>
 
       <volt-tabs [value]="selected()" (valueChange)="onTabChange($event)">
         <volt-tabs-list class="flex-wrap" aria-label="Export format">

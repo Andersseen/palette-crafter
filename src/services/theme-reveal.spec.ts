@@ -111,6 +111,85 @@ describe("reveal geometry", () => {
   });
 });
 
+describe("scoped reveal", () => {
+  /**
+   * A scoped overlay covers one region, so the radius must come from that box
+   * and the origin must be translated into it — a viewport-sized radius would
+   * bleed far past the panel, and an untranslated origin would start the wipe
+   * in the wrong corner.
+   */
+  const scopedClip = async (box: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }) => {
+    const service = create();
+    const { directive, plays } = fakeTrigger();
+    const overlay = fakeOverlay();
+
+    overlay.nativeElement.getBoundingClientRect = () =>
+      ({ ...box, right: box.left + box.width, bottom: box.top + box.height }) as DOMRect;
+
+    await service.run(directive, overlay, {
+      color: "#000000",
+      origin: { x: 700, y: 40 },
+      commit: () => undefined,
+      scope: "element",
+    });
+
+    return (plays[0]["clipPath"] as string[])[1];
+  };
+
+  it("translates the origin into the overlay's own box", async () => {
+    // Click at viewport (700, 40); box starts at (300, 120).
+    const clip = await scopedClip({ left: 300, top: 120, width: 800, height: 400 });
+    expect(clip).toContain("at 400px -80px");
+  });
+
+  it("sizes the radius to the box, not the viewport", async () => {
+    const clip = await scopedClip({ left: 300, top: 120, width: 800, height: 400 });
+    const radius = Number(/circle\((\d+(?:\.\d+)?)px/.exec(clip)![1]);
+
+    // Furthest corner of the 800x400 box from (400, -80).
+    expect(radius).toBeCloseTo(Math.hypot(400, 480), 5);
+    // Nothing like the viewport diagonal used by the full-screen variant.
+    expect(radius).toBeLessThan(Math.hypot(1000, 800));
+  });
+
+  it("still covers the box when the origin sits outside it", async () => {
+    // The generate button lives in the command bar, above the panel column,
+    // so the origin is genuinely outside the overlay.
+    const clip = await scopedClip({ left: 300, top: 120, width: 800, height: 400 });
+    const radius = Number(/circle\((\d+(?:\.\d+)?)px/.exec(clip)![1]);
+    const [, ox, oy] = /at (-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px/.exec(clip)!;
+
+    for (const [cx, cy] of [
+      [0, 0],
+      [800, 0],
+      [0, 400],
+      [800, 400],
+    ]) {
+      expect(Math.hypot(cx - Number(ox), cy - Number(oy))).toBeLessThanOrEqual(
+        radius + 1e-6,
+      );
+    }
+  });
+
+  it("uses the viewport by default", async () => {
+    const service = create();
+    const { directive, plays } = fakeTrigger();
+
+    await service.run(directive, fakeOverlay(), {
+      color: "#000000",
+      origin: { x: 0, y: 0 },
+      commit: () => undefined,
+    });
+
+    expect((plays[0]["clipPath"] as string[])[1]).toContain("at 0px 0px");
+  });
+});
+
 describe("run", () => {
   it("commits only after the overlay has covered the screen", async () => {
     const service = create();

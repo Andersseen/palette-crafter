@@ -16,10 +16,12 @@ import type { WcagLevel } from "@shared/types";
   template: `
     <div class="space-y-3 sm:space-y-4">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 class="text-base sm:text-lg font-semibold">Accessibility</h3>
-        <p class="text-xs sm:text-sm opacity-70">
-          {{ report().passing }} of {{ report().checks.length }} checks pass
-          WCAG AA
+        <p class="text-sm opacity-60">
+          Measured on the pairs the theme actually renders, with transparent
+          tokens composited at their real opacity.
+        </p>
+        <p class="font-mono text-xs tabular-nums opacity-70">
+          {{ report().passing }}/{{ report().checks.length }} pass AA
         </p>
       </div>
 

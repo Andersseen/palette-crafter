@@ -15,17 +15,25 @@ import {
   template: `
     <div class="w-full space-y-3">
       <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <h3 class="text-lg font-semibold capitalize">{{ name() }}</h3>
-          <span class="text-xs opacity-60 font-mono">{{
-            scale().DEFAULT
-          }}</span>
+        <div class="flex min-w-0 items-baseline gap-2">
+          <h3 class="text-sm font-semibold capitalize">{{ name() }}</h3>
+          <span
+            class="font-mono text-xs uppercase tabular-nums opacity-60"
+            [title]="'Active shade — click a swatch to change it'"
+          >
+            {{ scale().DEFAULT }}
+          </span>
+          <span class="hidden text-[11px] opacity-40 sm:inline">
+            {{ activeShade() ? "shade " + activeShade() : "custom" }}
+          </span>
         </div>
 
+        <!-- State is spelled out in the label rather than via aria-pressed:
+             volt-button wraps its own inner <button>, so ARIA set on this host
+             never lands on the real control. -->
         <volt-button
           size="sm"
           [variant]="locked() ? 'solid' : 'outline'"
-          [attr.aria-pressed]="locked()"
           [moveWhileTap]="{ scale: [1, 0.94] }"
           [title]="
             locked()
@@ -67,6 +75,7 @@ import {
             </svg>
             Lock
           }
+          <span class="sr-only">{{ name() }}</span>
         </volt-button>
       </div>
 
@@ -76,10 +85,10 @@ import {
         class="grid grid-cols-4 min-[420px]:grid-cols-6 sm:grid-cols-6 lg:grid-cols-11 gap-1.5 sm:gap-2 lg:gap-3"
         [moveStagger]="35"
       >
-        @for (item of scaleItems(); track item.key) {
+        @for (item of scaleItems(); track item.key + "-" + version()) {
           <button
             type="button"
-            moveInView="zoom-in"
+            moveEnter="zoom-in"
             [moveWhileHover]="{ scale: [1, 1.08], y: [0, -4] }"
             [moveWhileTap]="{ scale: [1, 0.96] }"
             [moveDuration]="200"
@@ -152,9 +161,23 @@ export default class ColorScaleComponent {
   scale = input.required<ColorScale>();
   type = input.required<BrandToken>();
   locked = input(false);
+  /** Changes on every new palette so the cards recreate and replay motion. */
+  version = input(0);
 
   updateActive = output<string>();
   toggleLock = output<BrandToken>();
+
+  /**
+   * Which shade is currently promoted to DEFAULT, or null once the user has
+   * picked one that no longer matches a step on the ramp.
+   */
+  activeShade = computed(() => {
+    const scale = this.scale();
+    const match = this.scaleItems().find(
+      (item) => item.value === scale.DEFAULT,
+    );
+    return match?.key ?? null;
+  });
 
   scaleItems = computed(() => {
     const scale = this.scale();

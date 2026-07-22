@@ -60,6 +60,7 @@ It's the component library by the same author, developed in the sibling repo `vo
 
 - Check `node_modules/@voltui/components` (types + README) or the source in `volt-ui/projects/volt/src/lib/components/<component>` to see the real API; don't assume from the name.
 - Don't modify `@voltui/components` code from this repo — design system changes belong in `volt-ui`.
+- **Never remove `resolve.dedupe` from `vite.config.ts`.** It lists `@angular/core`, `@angular/common` and `@angular/cdk`. Volt is built on `ng-primitives`, which resolves elements with the CDK's `coerceElement` (an `instanceof ElementRef` check). A duplicated Angular copy in the dev SSR graph makes that check fail and kills the whole server render with a misleading `nativeElement.addEventListener is not a function`. `@angular/cdk` is a direct devDependency purely so it can be deduped — under pnpm, deduping a transitive-only package makes it unresolvable.
 
 ## 7. Testing works; linting still does not exist
 

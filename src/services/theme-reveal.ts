@@ -11,11 +11,19 @@ export interface RevealOrigin {
 export interface RevealOptions {
   /** Color painted into the overlay while it expands. */
   color: string;
-  /** Runs once the overlay fully covers the viewport. */
+  /** Runs once the overlay fully covers its scope. */
   commit: () => void;
   origin?: RevealOrigin;
   /** Fade the overlay out afterwards instead of cutting; used by "generate". */
   fadeOut?: boolean;
+  /**
+   * How far the wipe reaches.
+   *
+   * - `viewport` — the whole page, for a mode switch that changes everything.
+   * - `element` — just the overlay's own box, so generating sweeps the palette
+   *   area while the command bar and rail stay visible and usable.
+   */
+  scope?: "viewport" | "element";
 }
 
 /**
@@ -39,26 +47,31 @@ export default class ThemeReveal {
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   /**
-   * Radius needed to cover the viewport from an arbitrary origin.
+   * Radius needed to cover a box of `width` × `height` from an origin inside it.
    *
    * `circle(100%)` resolves against the element's own box, which leaves a
    * visible wedge uncovered whenever the origin is off-centre — so the corner
    * distance is computed explicitly.
    */
-  private coveringRadius({ x, y }: RevealOrigin): number {
-    const view = this.document.defaultView;
-    const width = view?.innerWidth ?? 0;
-    const height = view?.innerHeight ?? 0;
-
+  private coveringRadius(
+    { x, y }: RevealOrigin,
+    width: number,
+    height: number,
+  ): number {
     return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
   }
 
-  private centre(): RevealOrigin {
+  private viewportSize(): { width: number; height: number } {
     const view = this.document.defaultView;
     return {
-      x: (view?.innerWidth ?? 0) / 2,
-      y: (view?.innerHeight ?? 0) / 2,
+      width: view?.innerWidth ?? 0,
+      height: view?.innerHeight ?? 0,
     };
+  }
+
+  private centre(): RevealOrigin {
+    const { width, height } = this.viewportSize();
+    return { x: width / 2, y: height / 2 };
   }
 
   /** Reads the click position, falling back to the centre for keyboard use. */
@@ -73,7 +86,13 @@ export default class ThemeReveal {
   async run(
     trigger: MoveTriggerDirective,
     overlay: ElementRef<HTMLElement>,
-    { color, commit, origin, fadeOut = false }: RevealOptions,
+    {
+      color,
+      commit,
+      origin,
+      fadeOut = false,
+      scope = "viewport",
+    }: RevealOptions,
   ): Promise<void> {
     if (!this.isBrowser) {
       commit();
@@ -81,8 +100,20 @@ export default class ThemeReveal {
     }
 
     const element = overlay.nativeElement;
-    const from = origin ?? this.centre();
-    const radius = this.coveringRadius(from);
+    const viewportOrigin = origin ?? this.centre();
+
+    // clip-path coordinates are relative to the element's own box, so a scoped
+    // overlay needs the click translated out of viewport space.
+    const box =
+      scope === "element"
+        ? element.getBoundingClientRect()
+        : { left: 0, top: 0, ...this.viewportSize() };
+
+    const from: RevealOrigin = {
+      x: viewportOrigin.x - box.left,
+      y: viewportOrigin.y - box.top,
+    };
+    const radius = this.coveringRadius(from, box.width, box.height);
 
     element.style.background = color;
     element.dataset["revealing"] = "true";

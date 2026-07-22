@@ -81,6 +81,14 @@ export default class ColorPalette {
   private brandColor = signal<string | null>(null);
   private exportFormatState = signal<ExportFormat>("tailwind");
 
+  /**
+   * Bumped on every commit. Templates fold it into `track` so swatches and
+   * scale cards are recreated, which replays their enter animation — the
+   * palette restages itself in place instead of being hidden behind a
+   * full-screen wipe.
+   */
+  readonly paletteVersion = signal(0);
+
   // Public computed signals
   theme = computed(() => this.currentTheme());
   mode = computed(() => this.themeMode());
@@ -253,6 +261,7 @@ export default class ColorPalette {
     this.persistTheme(result);
     this.updateCSSVariables();
     this.syncPermalinkToUrl();
+    this.paletteVersion.update((n) => n + 1);
   }
 
   /**

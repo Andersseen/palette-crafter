@@ -9,11 +9,11 @@
 
 ## `@voltui/components`
 
-### 1. Dev-mode SSR crashes — `ng-primitives` binds listeners on `nativeElement`
+### 1. Dev-mode SSR crashed — duplicate Angular instances break `coerceElement`
 
-**Severity: high for DX, none for production.**
+**Status: fixed in this repo.** Kept because the fragility is worth knowing.
 
-Running `pnpm dev` and requesting any page renders an **empty body**:
+`pnpm dev` rendered an **empty body** and flooded the terminal with:
 
 ```
 TypeError: nativeElement.addEventListener is not a function
@@ -22,39 +22,75 @@ TypeError: nativeElement.addEventListener is not a function
   at ngpButton  (ng-primitives-button.mjs)
 ```
 
-Root cause is in `ng-primitives@0.110.2`, not in volt:
+**The obvious diagnosis was wrong.** Instrumenting the server render showed the
+DOM is perfectly fine — `document.createElement("div").addEventListener` is a
+function, and so is the host element's. The real cause is one line deeper:
 
 ```js
-function listener(element, event, handler, options) {
-  return runInInjectionContext(options?.injector ?? inject(Injector), () => {
-    const nativeElement = coerceElement(element);
-    // no platform guard, and no Renderer2
-    ngZone.runOutsideAngular(() =>
-      nativeElement.addEventListener(event, handler, options?.config));
-  });
-}
+import { coerceElement } from '@angular/cdk/coercion';
+const nativeElement = coerceElement(element);   // instanceof ElementRef
 ```
 
-Angular's server-side DOM does not implement `addEventListener`, so the whole
-render aborts. It is **not** limited to buttons — `NgpLabel` (via `volt-label`)
-fails the same way, so any primitive that binds a listener is affected. Still
-present in the latest `ng-primitives@0.127.0`.
+`coerceElement` is an `instanceof ElementRef` check. Vite's dev SSR graph was
+loading a **second copy of `@angular/cdk`/`@angular/core`**, so `instanceof`
+returned false, the raw `ElementRef` was passed straight through, and
+`ElementRef.addEventListener` is of course undefined. The production build
+bundles a single copy, which is why only dev was affected.
 
-**The production build is unaffected**: `pnpm build` prerenders correctly (13
-`volt-button`, 26 `volt-card`, full body). Only the Vite dev SSR path breaks,
-which is why this went unnoticed — but it means `pnpm dev` gives you a
-client-only app with no server render.
+Fix applied here — declare `@angular/cdk` explicitly and dedupe:
 
-Suggested upstream fix: use `Renderer2.listen()`, which is SSR-safe by design,
-or guard with `isPlatformBrowser`. Patching just this one call site is **not**
-sufficient — doing so surfaces a second failure, `NG0203: NgZone token injection
-failed`, so there is more than one SSR assumption in that code path.
+```ts
+// vite.config.ts
+resolve: { dedupe: ["@angular/core", "@angular/common", "@angular/cdk"] }
+```
 
-Until it is fixed, the workaround in this repo's history was wrapping volt
-interactive components in `@if (isBrowser)` — see `theme-options.ts`, which
-still does exactly that.
+`@angular/cdk` has to be a direct dependency for this to work: under pnpm's
+strict layout, deduping a package that is only a transitive dependency makes it
+unresolvable (`Cannot find module '@angular/cdk/coercion'`). Same trap applies
+to `ng-primitives` itself — do **not** add it to `dedupe`.
 
-### 2. `volt-toggle-group` emits an array even in `single` mode
+Worth considering upstream anyway: `listener()` uses
+`nativeElement.addEventListener` rather than `Renderer2.listen()`. The Renderer
+route is SSR-safe by construction and would not depend on `instanceof` surviving
+the module graph. Any consumer of volt with a duplicated Angular instance hits
+this, and the error message points at the wrong layer entirely.
+
+### 2. `volt-button` swallows ARIA set by the consumer
+
+**Severity: high — it silently produces inaccessible controls.**
+
+`<volt-button>` is a host element that renders its own `<button>` inside:
+
+```html
+<volt-button aria-label="Switch to dark mode">
+  <button ngpbutton class="...">…</button>
+</volt-button>
+```
+
+Anything a consumer puts on the host — `aria-label`, `aria-pressed`,
+`aria-expanded` — lands on a non-interactive wrapper and never reaches the real
+control. Verified in a browser via the accessibility tree: an icon-only toggle
+written as
+
+```html
+<volt-button size="icon" [attr.aria-label]="…"><theme-switcher /></volt-button>
+```
+
+is announced as **`button` with no accessible name**. Nothing warns you; it
+looks correct in the template.
+
+The workaround here is to name the button from the inside with visually hidden
+text (`<span class="sr-only">`), and to spell state out in the label rather than
+using `aria-pressed`. That works but rules out any ARIA that must sit on the
+element itself.
+
+Worth fixing upstream one of two ways: forward known ARIA attributes from the
+host to the inner button, or drop the wrapper and make `volt-button` an
+attribute selector on a real `<button>` (`<button voltButton>`), which is the
+usual approach for exactly this reason and also removes an element from the box
+model.
+
+### 3. `volt-toggle-group` emits an array even in `single` mode
 
 `type="single"` still types `value` as `string[]` and emits `[]` when the active
 item is deselected. Consumers must write:
@@ -70,14 +106,14 @@ A `single` group returning `string | undefined` would remove that trap. Note
 `allowDeselection` exists but defaults to allowing an empty selection, which is
 rarely what a mode switch wants.
 
-### 3. `volt-badge` has no semantic status variants
+### 4. `volt-badge` has no semantic status variants
 
 Variants are `solid | secondary | outline | destructive`. Rendering a WCAG
 grade (`AAA` / `AA` / `AA Large` / `Fail`) forced an arbitrary mapping, with
 "AA Large" landing on `outline` because there is no warning variant. A
 `warning` / `success` pair would cover the common status-badge case.
 
-### 4. Good: the API held up
+### 5. Good: the API held up
 
 `VoltButton`, `VoltCard*`, `VoltCheckbox`, `VoltDialog*` and `VoltSeparator`
 all survived 0.1.0 → 0.6.0 unchanged in this app. `VoltCheckbox` moving
@@ -141,8 +177,7 @@ this library at all — a good contrast with the finding above.
 
 | Surface | volt | movement |
 | --- | --- | --- |
-| `hero-section.ts` | `VoltButton` | hover/tap scale, `moveLoop` spinner |
-| `header.ts` | `VoltButton` (icon) | hover rotate, tap scale |
+| `command-bar.ts` | `VoltButton` (+ icon) | hover lift/rotate, tap scale, `moveLoop` spinner |
 | `brand-color-input.ts` | `VoltInput`, `VoltLabel`, `VoltButton` | tap scale |
 | `export-panel.ts` | `VoltTabs*`, `VoltButton`, `VoltCard*` | tap scale |
 | `contrast-report.ts` | `VoltBadge` | `moveInView` + `moveStagger` |
@@ -150,4 +185,4 @@ this library at all — a good contrast with the finding above.
 | `color-swatch.ts` | `VoltCard*` | `moveInView`, hover/tap scale |
 | `theme-preview.ts` | 16 components | `moveInView`, stagger, hover |
 | `theme-options.ts` | dialog, switch, toggle group | — |
-| `(home).page.ts` | `VoltButton` | `moveInView` per section, `MoveTrigger` reveal |
+| `(home).page.ts` | — | panel enter transitions, `MoveTrigger` reveal |

@@ -3,45 +3,53 @@ import {
   ElementRef,
   computed,
   inject,
+  signal,
   viewChild,
 } from "@angular/core";
-import { VoltButton } from "@voltui/components";
+import {
+  VoltSeparator,
+  VoltTabs,
+  VoltTabsList,
+  VoltTabsTrigger,
+} from "@voltui/components";
 import { MOVEMENT_DIRECTIVES, MoveTriggerDirective } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import ThemeReveal from "@services/theme-reveal";
 
-import BrandColorInput from "@components/brand-color-input";
 import ColorSwatch from "@components/color-swatch";
 import ColorScaleComponent from "@components/color-scale";
+import CommandBar from "@components/command-bar";
 import ContrastReport from "@components/contrast-report";
 import ExportPanel from "@components/export-panel";
 import Footer from "@components/footer";
-import Header from "@components/header";
-import HeroSection from "@components/hero-section";
 import ThemePreview from "@components/theme-preview";
-import ThemeOptions from "@components/theme-options";
 import type { BrandToken } from "@shared/types";
+
+/** Sections the workspace can show, in the order they appear in the rail. */
+const PANELS = ["scales", "preview", "export", "a11y"] as const;
+type Panel = (typeof PANELS)[number];
 
 @Component({
   selector: "app-home",
   imports: [
     ...MOVEMENT_DIRECTIVES,
-    VoltButton,
+    VoltSeparator,
+    VoltTabs,
+    VoltTabsList,
+    VoltTabsTrigger,
+    CommandBar,
     ThemePreview,
-    BrandColorInput,
     ColorSwatch,
     ColorScaleComponent,
     ContrastReport,
     ExportPanel,
-    Header,
-    HeroSection,
-    ThemeOptions,
     Footer,
   ],
+  host: {
+    "(document:keydown)": "onKeydown($event)",
+  },
   template: `
-    <section
-      class="relative isolate min-h-screen overflow-x-hidden bg-background text-foreground"
-    >
+    <div class="min-h-screen bg-background text-foreground">
       <div
         #overlay
         id="theme-overlay"
@@ -52,161 +60,212 @@ import type { BrandToken } from "@shared/types";
         moveEasing="cubic-bezier(0.22, 1, 0.36, 1)"
       ></div>
 
-      <div class="blend-contrast flex min-h-screen flex-col">
-        <app-header
-          [isDarkMode]="isDarkMode()"
-          [isLoading]="isLoading()"
-          (toggleThemeMode)="toggleThemeMode($event)"
-        />
+      <app-command-bar
+        [isDarkMode]="isDarkMode()"
+        [isLoading]="isLoading()"
+        (generate)="generatePalette($event)"
+        (toggleMode)="toggleThemeMode($event)"
+      />
 
-        <!-- pb leaves room for the floating Theme Options button, which
-             otherwise sits on top of the last section on small screens. -->
-        <main
-          class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 pb-24 sm:pb-28"
+      @if (themeError(); as message) {
+        <div
+          class="border-b border-danger/40 bg-danger/10 px-4 py-2 text-sm"
+          role="alert"
+          moveEnter="fade-down"
         >
-          <app-hero-section
-            [isDarkMode]="isDarkMode()"
-            [isLoading]="isLoading()"
-            (generatePalette)="generatePalette($event)"
-          />
+          {{ message }}
+        </div>
+      }
 
-          <section class="mb-8 sm:mb-12 max-w-3xl mx-auto">
-            <app-brand-color-input />
-          </section>
-
-          @if (themeError(); as message) {
-            <div
-              class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm shadow-sm"
-              role="alert"
-              moveEnter="fade-down"
-            >
-              <p class="opacity-80">{{ message }}</p>
-              <volt-button
-                variant="outline"
-                size="sm"
-                class="shrink-0"
-                [disabled]="isLoading()"
-                (click)="retryTheme()"
-              >
-                Retry
-              </volt-button>
-            </div>
-          }
-
-          <!-- Base Colors (Bg/Fg) -->
-          <section class="mb-8 sm:mb-12" moveInView="fade-up" [moveStagger]="60">
-            <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
-              Base Colors
-            </h2>
-            <div
-              class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl"
-            >
-              @for (swatch of baseSwatches(); track swatch.cssVar) {
-                <app-color-swatch [swatch]="swatch" />
-              }
-            </div>
-          </section>
-
-          <!-- Color Scales -->
-          <section class="mb-8 sm:mb-12 space-y-8" moveInView="fade-up">
-            <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
-              Brand Colors
-            </h2>
-
-            @if (allBrandColorsAreSingle()) {
-              <div
-                class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl"
-              >
-                @for (swatch of brandSwatches(); track swatch.cssVar) {
-                  <app-color-swatch [swatch]="swatch" layout="row" />
-                }
-              </div>
-            } @else {
-              @if (colorModes().primary === "scale") {
-                <app-color-scale
-                  name="Primary"
-                  type="primary"
-                  [scale]="primaryScale()"
-                  [locked]="locked().primary"
-                  (updateActive)="updateActiveColor('primary', $event)"
-                  (toggleLock)="toggleLock($event)"
-                />
-              } @else {
-                <div>
-                  <h3 class="text-lg font-semibold mb-3">Primary</h3>
-                  <div class="max-w-2xl">
-                    <app-color-swatch
-                      [swatch]="brandSwatches()[0]"
-                      layout="row"
-                    />
-                  </div>
-                </div>
-              }
-
-              @if (colorModes().secondary === "scale") {
-                <app-color-scale
-                  name="Secondary"
-                  type="secondary"
-                  [scale]="secondaryScale()"
-                  [locked]="locked().secondary"
-                  (updateActive)="updateActiveColor('secondary', $event)"
-                  (toggleLock)="toggleLock($event)"
-                />
-              } @else {
-                <div>
-                  <h3 class="text-lg font-semibold mb-3">Secondary</h3>
-                  <div class="max-w-2xl">
-                    <app-color-swatch
-                      [swatch]="brandSwatches()[1]"
-                      layout="row"
-                    />
-                  </div>
-                </div>
-              }
-            }
-          </section>
-
-          @if (statusSwatches().length > 0) {
-            <section class="mb-8 sm:mb-12" moveInView="fade-up">
-              <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
-                Status Colors
+      <main
+        class="mx-auto grid max-w-[1600px] gap-6 px-3 py-5 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8"
+      >
+        <!-- Left rail: the palette's identity, always visible while you work
+             through the panels on the right. -->
+        <aside class="lg:sticky lg:top-[7.5rem] lg:self-start">
+          <div class="space-y-4">
+            <section>
+              <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-wider opacity-50">
+                Base
               </h2>
-              <div
-                class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl"
-              >
-                @for (swatch of statusSwatches(); track swatch.cssVar) {
+              <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
+                @for (swatch of baseSwatches(); track swatch.cssVar + paletteVersion()) {
                   <app-color-swatch [swatch]="swatch" layout="row" />
                 }
               </div>
             </section>
+
+            <volt-separator class="hidden lg:block" />
+
+            <section>
+              <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-wider opacity-50">
+                Brand
+              </h2>
+              <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
+                @for (swatch of brandSwatches(); track swatch.cssVar + paletteVersion()) {
+                  <app-color-swatch [swatch]="swatch" layout="row" />
+                }
+              </div>
+            </section>
+
+            @if (statusSwatches().length > 0) {
+              <section>
+                <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-wider opacity-50">
+                  Status
+                </h2>
+                <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
+                  @for (swatch of statusSwatches(); track swatch.cssVar + paletteVersion()) {
+                    <app-color-swatch [swatch]="swatch" layout="row" />
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        </aside>
+
+        <div class="relative min-w-0">
+          <!-- Scoped reveal: generating sweeps the panel column only. The
+               command bar and the swatch rail stay visible and usable — the
+               rail restages itself through its own re-key animation. The mode
+               switch uses the full-viewport overlay above, because that really
+               does change the whole page. -->
+          <div
+            #paletteOverlay
+            class="palette-overlay"
+            aria-hidden="true"
+            [moveTrigger]="false"
+            [moveFrames]="{}"
+            [moveDuration]="460"
+            moveEasing="cubic-bezier(0.22, 1, 0.36, 1)"
+          ></div>
+
+          <!-- Panel switcher keeps the workspace to one screen instead of a
+               long marketing-style scroll. -->
+          <div class="mb-5 flex flex-wrap items-center justify-between gap-2">
+            <volt-tabs
+              [value]="activePanel()"
+              (valueChange)="onPanelChange($event)"
+            >
+              <volt-tabs-list aria-label="Workspace panels">
+                @for (panel of panels; track panel) {
+                  <volt-tabs-trigger [value]="panel">
+                    {{ panelLabels[panel] }}
+                  </volt-tabs-trigger>
+                }
+              </volt-tabs-list>
+            </volt-tabs>
+
+            <span class="hidden items-center gap-2 text-[11px] opacity-45 lg:flex">
+              @for (hint of shortcutHints; track hint.keys) {
+                <span class="flex items-center gap-1">
+                  <kbd class="rounded border border-foreground/25 px-1 font-mono leading-4">
+                    {{ hint.keys }}
+                  </kbd>
+                  {{ hint.label }}
+                </span>
+              }
+            </span>
+          </div>
+
+          @switch (activePanel()) {
+            @case ("scales") {
+              <div class="space-y-7" moveEnter="fade-up" [moveDuration]="220">
+                @if (colorModes().primary === "scale") {
+                  <app-color-scale
+                    name="Primary"
+                    type="primary"
+                    [scale]="primaryScale()"
+                    [locked]="locked().primary"
+                    [version]="paletteVersion()"
+                    (updateActive)="updateActiveColor('primary', $event)"
+                    (toggleLock)="toggleLock($event)"
+                  />
+                } @else {
+                  <div class="max-w-xl">
+                    <h3 class="mb-2 text-sm font-semibold">Primary</h3>
+                    <app-color-swatch [swatch]="brandSwatches()[0]" layout="row" />
+                  </div>
+                }
+
+                @if (colorModes().secondary === "scale") {
+                  <app-color-scale
+                    name="Secondary"
+                    type="secondary"
+                    [scale]="secondaryScale()"
+                    [locked]="locked().secondary"
+                    [version]="paletteVersion()"
+                    (updateActive)="updateActiveColor('secondary', $event)"
+                    (toggleLock)="toggleLock($event)"
+                  />
+                } @else {
+                  <div class="max-w-xl">
+                    <h3 class="mb-2 text-sm font-semibold">Secondary</h3>
+                    <app-color-swatch [swatch]="brandSwatches()[1]" layout="row" />
+                  </div>
+                }
+              </div>
+            }
+            @case ("preview") {
+              <div moveEnter="fade-up" [moveDuration]="220">
+                <app-theme-preview />
+              </div>
+            }
+            @case ("export") {
+              <div moveEnter="fade-up" [moveDuration]="220">
+                <app-export-panel />
+              </div>
+            }
+            @case ("a11y") {
+              <div moveEnter="fade-up" [moveDuration]="220">
+                <app-contrast-report />
+              </div>
+            }
           }
+        </div>
+      </main>
 
-          <section class="mb-8 sm:mb-12" moveInView="fade-up">
-            <app-contrast-report />
-          </section>
-
-          <section class="mb-8 sm:mb-12" moveInView="fade-up">
-            <app-theme-preview />
-          </section>
-
-          <section moveInView="fade-up">
-            <app-export-panel />
-          </section>
-        </main>
-
-        <app-footer />
-      </div>
-
-      <app-theme-options />
-    </section>
+      <app-footer />
+    </div>
   `,
 })
 export default class Home {
   private readonly colorService = inject(ColorPalette);
   private readonly reveal = inject(ThemeReveal);
 
+  // Two overlays: full-viewport for the mode switch, scoped to the workspace
+  // for generate. Read by name so each gets its own MoveTrigger.
   overlay = viewChild.required<ElementRef<HTMLElement>>("overlay");
-  private overlayMotion = viewChild.required(MoveTriggerDirective);
+  private overlayMotion = viewChild.required("overlay", {
+    read: MoveTriggerDirective,
+  });
+
+  paletteOverlay = viewChild.required<ElementRef<HTMLElement>>("paletteOverlay");
+  private paletteMotion = viewChild.required("paletteOverlay", {
+    read: MoveTriggerDirective,
+  });
+
+  readonly panels = PANELS;
+  readonly panelLabels: Record<Panel, string> = {
+    scales: "Scales",
+    preview: "Preview",
+    export: "Export",
+    a11y: "Accessibility",
+  };
+
+  readonly shortcutHints = [
+    { keys: "G", label: "generate" },
+    { keys: "D", label: "mode" },
+    { keys: "1 2", label: "lock" },
+  ];
+
+  activePanel = signal<Panel>("scales");
+
+  /** `volt-tabs` emits the raw trigger value. */
+  onPanelChange(value: string | undefined): void {
+    if (value) {
+      this.activePanel.set(value as Panel);
+    }
+  }
 
   isDarkMode = computed(() => this.colorService.mode() === "dark");
   isLoading = computed(() => this.colorService.isLoading());
@@ -218,25 +277,59 @@ export default class Home {
       .filter((s) => s.name === "Background" || s.name === "Foreground"),
   );
 
+  /** Folded into `track` so a new palette recreates the cards and replays motion. */
+  paletteVersion = computed(() => this.colorService.paletteVersion());
+
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
   colorModes = computed(() => this.colorService.selectedColorModes());
   locked = computed(() => this.colorService.locked());
-  allBrandColorsAreSingle = computed(() => {
-    const modes = this.colorModes();
-    return modes.primary === "single" && modes.secondary === "single";
-  });
   brandSwatches = computed(() => this.colorService.getBrandColorSwatches());
   statusSwatches = computed(() => this.colorService.getStatusColorSwatches());
 
-  // No generation call here: the service seeds itself synchronously, so the
-  // prerendered HTML already carries the real palette. Kicking off a request
-  // from this constructor is what used to overwrite a restored palette and
-  // make the cache pointless.
+  /**
+   * Keyboard shortcuts, skipped while typing so the hex field stays usable.
+   */
+  onKeydown(event: KeyboardEvent): void {
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    if (
+      target?.isContentEditable ||
+      ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")
+    ) {
+      return;
+    }
+
+    switch (event.key.toLowerCase()) {
+      case "g":
+        event.preventDefault();
+        void this.generatePalette();
+        break;
+      case "d":
+        event.preventDefault();
+        void this.toggleThemeMode();
+        break;
+      case "1":
+        event.preventDefault();
+        this.toggleLock("primary");
+        break;
+      case "2":
+        event.preventDefault();
+        this.toggleLock("secondary");
+        break;
+    }
+  }
 
   /**
-   * Generating sweeps the new primary across the page, then dissolves to show
-   * the palette it produced — the brand color announces itself first.
+   * Generating sweeps the new primary across the workspace only.
+   *
+   * Same circular wipe as the mode switch, but scoped to the palette area
+   * instead of the viewport — covering the entire UI hid the very thing you
+   * asked to see. The swatches and scale cards also re-key off
+   * `paletteVersion`, so they cascade back in as the overlay lifts.
    */
   async generatePalette(ev?: MouseEvent): Promise<void> {
     if (this.isLoading()) {
@@ -251,11 +344,12 @@ export default class Home {
       return;
     }
 
-    await this.reveal.run(this.overlayMotion(), this.overlay(), {
+    await this.reveal.run(this.paletteMotion(), this.paletteOverlay(), {
       color: pending.theme.primary.DEFAULT,
       origin: this.reveal.originOf(ev),
       commit: () => this.colorService.commit(pending),
       fadeOut: true,
+      scope: "element",
     });
   }
 
@@ -295,9 +389,5 @@ export default class Home {
 
   toggleLock(token: BrandToken): void {
     this.colorService.toggleLocked(token);
-  }
-
-  retryTheme(): void {
-    void this.generatePalette();
   }
 }
