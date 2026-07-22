@@ -34,6 +34,9 @@
     "start": "pnpm dev",
     "clean": "rm -rf dist .angular/cache",
     "build": "ng build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:core": "node scripts/build-core.mjs",
     "build:cf": "BUILD_PRESET=cloudflare-pages ng build",
     "dev:cf": "pnpm build:cf && wrangler pages dev",
     "deploy:cf": "pnpm build:cf && wrangler pages deploy"
@@ -78,6 +81,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.0.0",
     "vite-tsconfig-paths": "^4.2.0",
+    "vitest": "^4.1.10",
     "wrangler": "^4.76.0"
   },
   "type": "module"

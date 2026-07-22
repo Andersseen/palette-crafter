@@ -11,66 +11,48 @@ const normalizeBaseUrl = (value: string | undefined): string => {
   return value?.replace(/\/+$/, "") ?? "";
 };
 
+/**
+ * HTTP client for the theme API.
+ *
+ * The playground does not need this in a normal deployment — it generates
+ * themes in-process from the same `generateTheme` the API calls, which is what
+ * actually guarantees parity (docs/CONTEXT.md). This client only takes over
+ * when `THEME_API_BASE_URL` points the playground at a remote instance.
+ */
 @Injectable({ providedIn: "root" })
 export default class ThemeApiClient {
-  private static hasLoggedMissingBaseUrl = false;
-
   private readonly env = getViteEnv();
   private readonly baseUrl = normalizeBaseUrl(
     (this.env["THEME_API_BASE_URL"] as string | undefined) ??
       (this.env["VITE_THEME_API_BASE_URL"] as string | undefined),
   );
 
-  readonly missingBaseUrl =
-    this.baseUrl.length === 0 && this.env["DEV"] === true;
+  /** When false the caller should generate locally instead. */
+  readonly isRemoteConfigured = this.baseUrl.length > 0;
 
-  constructor() {
-    if (
-      this.missingBaseUrl &&
-      typeof window !== "undefined" &&
-      !ThemeApiClient.hasLoggedMissingBaseUrl
-    ) {
-      ThemeApiClient.hasLoggedMissingBaseUrl = true;
-      console.warn(
-        "THEME_API_BASE_URL is not configured. Falling back to same-origin /api/v1/theme for local development.",
-      );
-    }
-  }
-
+  /**
+   * Uses GET so responses are cacheable by the browser and the CDN — the
+   * endpoint sets a long `s-maxage` for seeded, deterministic requests.
+   */
   getTheme(params: ThemeApiRequest = {}): Promise<ThemeApiResponse> {
     const search = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (value !== undefined && value !== "") {
         search.set(key, String(value));
       }
     });
 
     const query = search.toString();
-    return this.request(`${this.endpoint()}${query ? `?${query}` : ""}`, {
-      method: "GET",
-    });
-  }
-
-  createTheme(payload: ThemeApiRequest = {}): Promise<ThemeApiResponse> {
-    return this.request(this.endpoint(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    return this.request(`${this.endpoint()}${query ? `?${query}` : ""}`);
   }
 
   private endpoint(): string {
-    return `${this.baseUrl}/api/v1/theme`;
+    return `${this.baseUrl}/api/v2/theme`;
   }
 
-  private async request(
-    url: string,
-    init: RequestInit,
-  ): Promise<ThemeApiResponse> {
-    const response = await fetch(url, init);
+  private async request(url: string): Promise<ThemeApiResponse> {
+    const response = await fetch(url, { method: "GET" });
 
     if (!response.ok) {
       throw new Error(await this.errorMessage(response));

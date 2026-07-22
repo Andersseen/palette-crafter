@@ -11,6 +11,16 @@
   --secondary-foreground: 255 255 255;
   --secondary-contrast: 255 255 255;
 
+  /* Status defaults. Overwritten at runtime by ColorPalette.updateCSSVariables. */
+  --info: 37 99 235;
+  --info-foreground: 255 255 255;
+  --success: 22 163 74;
+  --success-foreground: 255 255 255;
+  --warning: 245 158 11;
+  --warning-foreground: 0 0 0;
+  --danger: 220 38 38;
+  --danger-foreground: 255 255 255;
+
   --background: rgb(var(--bg));
   --foreground: rgb(var(--fg));
   --surface: rgb(var(--bg));
@@ -103,6 +113,15 @@
   --color-secondary-900-contrast: rgb(var(--secondary-900-contrast));
   --color-secondary-950: rgb(var(--secondary-950));
   --color-secondary-950-contrast: rgb(var(--secondary-950-contrast));
+
+  --color-info: rgb(var(--info));
+  --color-info-foreground: rgb(var(--info-foreground));
+  --color-success: rgb(var(--success));
+  --color-success-foreground: rgb(var(--success-foreground));
+  --color-warning: rgb(var(--warning));
+  --color-warning-foreground: rgb(var(--warning-foreground));
+  --color-danger: rgb(var(--danger));
+  --color-danger-foreground: rgb(var(--danger-foreground));
 }
 
 /* @layer base {

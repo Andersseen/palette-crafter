@@ -1,15 +1,19 @@
+import { isPlatformBrowser } from "@angular/common";
 import {
   Component,
-  computed,
   DOCUMENT,
   ElementRef,
+  PLATFORM_ID,
+  computed,
   inject,
   viewChild,
 } from "@angular/core";
 import ColorPalette from "@services/color-palette";
 
+import BrandColorInput from "@components/brand-color-input";
 import ColorSwatch from "@components/color-swatch";
 import ColorScaleComponent from "@components/color-scale";
+import ContrastReport from "@components/contrast-report";
 import ExportPanel from "@components/export-panel";
 import Footer from "@components/footer";
 import Header from "@components/header";
@@ -17,13 +21,16 @@ import HeroSection from "@components/hero-section";
 import ThemePreview from "@components/theme-preview";
 import ThemeOptions from "@components/theme-options";
 import { hexToRgb } from "@shared/utils";
+import type { BrandToken } from "@shared/types";
 
 @Component({
   selector: "app-home",
   imports: [
     ThemePreview,
+    BrandColorInput,
     ColorSwatch,
     ColorScaleComponent,
+    ContrastReport,
     ExportPanel,
     Header,
     HeroSection,
@@ -51,6 +58,10 @@ import { hexToRgb } from "@shared/utils";
             [isLoading]="isLoading()"
             (generatePalette)="generatePalette($event)"
           />
+
+          <section class="mb-8 sm:mb-12 max-w-3xl mx-auto">
+            <app-brand-color-input />
+          </section>
 
           @if (themeError(); as message) {
             <div
@@ -90,7 +101,9 @@ import { hexToRgb } from "@shared/utils";
             </h2>
 
             @if (allBrandColorsAreSingle()) {
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl">
+              <div
+                class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl"
+              >
                 @for (swatch of brandSwatches(); track swatch.cssVar) {
                   <app-color-swatch [swatch]="swatch" layout="row" />
                 }
@@ -101,13 +114,18 @@ import { hexToRgb } from "@shared/utils";
                   name="Primary"
                   type="primary"
                   [scale]="primaryScale()"
+                  [locked]="locked().primary"
                   (updateActive)="updateActiveColor('primary', $event)"
+                  (toggleLock)="toggleLock($event)"
                 />
               } @else {
                 <div>
                   <h3 class="text-lg font-semibold mb-3">Primary</h3>
                   <div class="max-w-2xl">
-                    <app-color-swatch [swatch]="brandSwatches()[0]" layout="row" />
+                    <app-color-swatch
+                      [swatch]="brandSwatches()[0]"
+                      layout="row"
+                    />
                   </div>
                 </div>
               }
@@ -117,13 +135,18 @@ import { hexToRgb } from "@shared/utils";
                   name="Secondary"
                   type="secondary"
                   [scale]="secondaryScale()"
+                  [locked]="locked().secondary"
                   (updateActive)="updateActiveColor('secondary', $event)"
+                  (toggleLock)="toggleLock($event)"
                 />
               } @else {
                 <div>
                   <h3 class="text-lg font-semibold mb-3">Secondary</h3>
                   <div class="max-w-2xl">
-                    <app-color-swatch [swatch]="brandSwatches()[1]" layout="row" />
+                    <app-color-swatch
+                      [swatch]="brandSwatches()[1]"
+                      layout="row"
+                    />
                   </div>
                 </div>
               }
@@ -135,13 +158,19 @@ import { hexToRgb } from "@shared/utils";
               <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
                 Status Colors
               </h2>
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl">
+              <div
+                class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl"
+              >
                 @for (swatch of statusSwatches(); track swatch.cssVar) {
                   <app-color-swatch [swatch]="swatch" layout="row" />
                 }
               </div>
             </section>
           }
+
+          <section class="mb-8 sm:mb-12">
+            <app-contrast-report />
+          </section>
 
           <section class="mb-8 sm:mb-12">
             <app-theme-preview />
@@ -162,6 +191,7 @@ import { hexToRgb } from "@shared/utils";
 export default class Home {
   private readonly colorService = inject(ColorPalette);
   private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly root = this.document.documentElement;
 
   overlay = viewChild<ElementRef<HTMLElement>>("overlay");
@@ -170,16 +200,16 @@ export default class Home {
   isLoading = computed(() => this.colorService.isLoading());
   themeError = computed(() => this.colorService.error());
 
-  // Split swatches
-  baseSwatches = computed(() => {
-    return this.colorService
+  baseSwatches = computed(() =>
+    this.colorService
       .getColorSwatches()
-      .filter((s) => s.name === "Background" || s.name === "Foreground");
-  });
+      .filter((s) => s.name === "Background" || s.name === "Foreground"),
+  );
 
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
   colorModes = computed(() => this.colorService.selectedColorModes());
+  locked = computed(() => this.colorService.locked());
   allBrandColorsAreSingle = computed(() => {
     const modes = this.colorModes();
     return modes.primary === "single" && modes.secondary === "single";
@@ -187,20 +217,20 @@ export default class Home {
   brandSwatches = computed(() => this.colorService.getBrandColorSwatches());
   statusSwatches = computed(() => this.colorService.getStatusColorSwatches());
 
-  constructor() {
-    void this.colorService.generatePalette({ seed: "palette-crafter-home" });
-  }
+  // No generation call here: the service seeds itself synchronously, so the
+  // prerendered HTML already carries the real palette. Kicking off a request
+  // from this constructor is what used to overwrite a restored palette and
+  // make the cache pointless.
 
   async generatePalette(ev?: MouseEvent): Promise<void> {
     if (this.isLoading()) {
       return;
     }
 
-    this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
-    this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
-    const updated = await this.colorService.generatePalette();
+    this.setOrigin(ev);
+    const updated = await this.colorService.reroll();
 
-    if (!updated) {
+    if (!updated || !isPlatformBrowser(this.platformId)) {
       return;
     }
 
@@ -208,21 +238,18 @@ export default class Home {
       this.colorService.theme().primary.DEFAULT,
     )} / 0.2)`;
 
-    this.root.classList.add("theme-generate-animating");
-    setTimeout(() => {
-      this.root.classList.remove("theme-generate-animating");
-    }, 300);
+    this.animate("theme-generate-animating", 300);
   }
+
   async toggleThemeMode(ev?: MouseEvent): Promise<void> {
     if (this.isLoading()) {
       return;
     }
 
-    this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
-    this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
+    this.setOrigin(ev);
     const updated = await this.colorService.toggleThemeMode();
 
-    if (!updated) {
+    if (!updated || !isPlatformBrowser(this.platformId)) {
       return;
     }
 
@@ -230,19 +257,34 @@ export default class Home {
       this.colorService.theme().bg,
     )})`;
 
-    this.root.classList.add("theme-animating");
-    setTimeout(() => {
-      this.root.classList.remove("theme-animating");
-
-      this.colorService.updateCSSVariables();
-    }, 150);
+    this.animate("theme-animating", 150, () =>
+      this.colorService.updateCSSVariables(),
+    );
   }
 
-  updateActiveColor(type: "primary" | "secondary", shade: string): void {
+  updateActiveColor(type: BrandToken, shade: string): void {
     this.colorService.updateActiveShade(type, shade);
   }
 
+  toggleLock(token: BrandToken): void {
+    this.colorService.toggleLocked(token);
+  }
+
   retryTheme(): void {
-    void this.colorService.generatePalette();
+    void this.colorService.reroll();
+  }
+
+  /** Anchors the reveal animation on the click position. */
+  private setOrigin(ev?: MouseEvent): void {
+    this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
+    this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
+  }
+
+  private animate(className: string, duration: number, done?: () => void): void {
+    this.root.classList.add(className);
+    setTimeout(() => {
+      this.root.classList.remove(className);
+      done?.();
+    }, duration);
   }
 }
