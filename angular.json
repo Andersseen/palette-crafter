@@ -5,7 +5,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "palette-forge": {
+    "palette-crafter": {
       "architect": {
         "build": {
           "builder": "@analogjs/platform:vite",
@@ -30,16 +30,16 @@
           "builder": "@analogjs/platform:vite-dev-server",
           "defaultConfiguration": "development",
           "options": {
-            "buildTarget": "palette-forge:build",
+            "buildTarget": "palette-crafter:build",
             "port": 4200
           },
           "configurations": {
             "development": {
-              "buildTarget": "palette-forge:build:development",
+              "buildTarget": "palette-crafter:build:development",
               "hmr": true
             },
             "production": {
-              "buildTarget": "palette-forge:build:production"
+              "buildTarget": "palette-crafter:build:production"
             }
           }
         }

@@ -1,4 +1,4 @@
-# Current state — Palette Forge
+# Current state — Palette Crafter
 
 > Snapshot meant to be pasted at the start of a new session (with any model/tool) when there's no time for it to read the whole repo. Update it when you finish a relevant change — otherwise it lies and confuses more than it helps.
 >
@@ -20,19 +20,20 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **Playground** (`src/components/*`, `src/app/pages/(home).page.ts`): brand-color input, per-token lock so you can keep the primary and reroll the rest, live accessibility report, export panel with format switcher, copy and download, shareable permalink.
 - **Client state** (`src/services/color-palette.ts`, signals, `providedIn: root`): generates **in-process** from the shared generator — parity comes from the shared function, not from HTTP. Only calls the API when `THEME_API_BASE_URL` points at a remote instance, and then via GET.
 - **SSR + hydration**: zoneless, `provideClientHydration(withEventReplay())`, `/` prerendered. CSS variables are written on the server too, so **the prerendered document already carries the palette** (193 custom properties on `<html>`) — no flash of default colors.
-- **npm package**: `pnpm build:core` compiles `src/shared` to `dist/core` as `@palette-forge/core` (ESM + types, zero dependencies, verified running in plain Node). **Not yet published.**
+- **npm package**: `pnpm build:core` compiles `src/shared` to `dist/core` as `@palette-crafter/core` (ESM + types, zero dependencies, verified running in plain Node). **Not yet published.**
 - **Tests**: 100 across 7 files. `pnpm test`.
 - **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`.
 
 ## What's missing / broken (don't assume it works)
 
 - **No linter or formatter configured.** No `eslint.config.*` or `.prettierrc`. The existing code style is the only contract — imitate it.
-- **The npm package is built but not published.** `@palette-forge/core` needs the scope reserved and `npm publish dist/core --access public` run deliberately.
+- **The npm package is built but not published.** `@palette-crafter/core` needs the scope reserved and `npm publish dist/core --access public` run deliberately.
 - **Only the service is covered by Angular tests.** `src/test-setup.ts` initialises the TestBed, so component tests are possible, but none exist.
 - **The `Border` contrast check reports Fail** for the deliberately subtle 0.2-alpha divider. This is reported honestly rather than hidden; if you want WCAG 1.4.11 compliance for non-text UI, the border token needs to be stronger.
 - **Exports cover the current mode only.** Emitting `:root` plus `.dark` in one file would require generating both themes.
-- **Cloudflare project rename leftover**: `wrangler.jsonc.name` is `palette-forge`, so the Pages project must exist (`wrangler pages project create palette-forge --production-branch=main`) or CI deploy fails. The old `palette-crafter` project still exists on Cloudflare until deleted manually.
-- **The home seed is still `"palette-crafter-home"`** (`src/services/color-palette.ts`) **on purpose** — the seed determines the output, so renaming it changes the default palette.
+- **Verify the Cloudflare Pages project name.** `wrangler.jsonc.name` is now `palette-crafter` again (it briefly said `palette-forge`). Confirm a Pages project with that name exists — `wrangler pages project list` — or the CI deploy fails. If a stray `palette-forge` project was created while the name was wrong, it can be deleted.
+- **The home seed is `"palette-crafter-home"`** (`src/services/color-palette.ts`) and was deliberately left alone through the rename — the seed determines the output, so touching it would change the default palette.
+- **The localStorage key changed** from `palette-forge:last-theme` to `palette-crafter:last-theme`. Anyone with a cached palette silently gets a fresh one on next visit; harmless, since the palette also lives in the URL now.
 - **A single real page.** `/` is the only content route.
 
 ## Architecture in 30 seconds

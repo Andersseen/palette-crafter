@@ -1,4 +1,4 @@
-/* Build config for the publishable `@palette-forge/core` package.
+/* Build config for the publishable `@palette-crafter/core` package.
    Compiles only src/shared (pure logic, zero dependencies) to ESM + types. */
 {
   "extends": "./tsconfig.json",

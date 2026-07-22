@@ -1,5 +1,5 @@
 /**
- * Builds the publishable `@palette-forge/core` package into dist/core.
+ * Builds the publishable `@palette-crafter/core` package into dist/core.
  *
  * The package is generated rather than kept as a second source tree so there is
  * only ever one copy of the generator: the app, the HTTP API and the npm
@@ -27,7 +27,7 @@ execFileSync("npx", ["tsc", "-p", "tsconfig.core.json"], {
 });
 
 const corePackage = {
-  name: "@palette-forge/core",
+  name: "@palette-crafter/core",
   version: appPackage.version ?? "0.1.0",
   description:
     "Deterministic, accessible color palette generation. Pure TypeScript, zero dependencies.",
@@ -66,25 +66,25 @@ writeFileSync(
 
 writeFileSync(
   join(outDir, "README.md"),
-  `# @palette-forge/core
+  `# @palette-crafter/core
 
 Deterministic, accessible color palette generation. Pure TypeScript, zero
 dependencies — runs in the browser, on a worker, and at build time.
 
-This is the same engine behind [Palette Forge](${appPackage.homepage}) and its
+This is the same engine behind [Palette Crafter](${appPackage.homepage}) and its
 HTTP API, so a palette generated here is identical to one fetched from
 \`/api/v2/theme\`.
 
 ## Install
 
 \`\`\`sh
-npm install @palette-forge/core
+npm install @palette-crafter/core
 \`\`\`
 
 ## Usage
 
 \`\`\`ts
-import { generateTheme, exportTheme, buildContrastReport } from "@palette-forge/core";
+import { generateTheme, exportTheme, buildContrastReport } from "@palette-crafter/core";
 
 // The same seed always returns the same colors.
 const { theme, meta } = generateTheme({
@@ -117,5 +117,5 @@ ${appPackage.license}
 `,
 );
 
-console.log(`\n@palette-forge/core built into ${outDir}`);
+console.log(`\n@palette-crafter/core built into ${outDir}`);
 console.log("Publish with: npm publish dist/core --access public");

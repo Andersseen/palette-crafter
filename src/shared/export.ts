@@ -164,7 +164,7 @@ const header = (meta: ThemeApiMeta, comment: "css" | "scss"): string => {
   const open = comment === "css" ? "/*" : "//";
   const close = comment === "css" ? " */" : "";
   const lines = [
-    "Generated with Palette Forge",
+    "Generated with Palette Crafter",
     `mode: ${meta.mode} · harmony: ${meta.harmony} · algorithm: ${meta.algorithm}`,
     meta.seed !== undefined
       ? `reproduce: ${permalinkFor(meta)}`
@@ -350,7 +350,7 @@ const toDesignTokens = (context: ExportContext): string => {
   return JSON.stringify(
     {
       $schema: "https://tr.designtokens.org/format/",
-      $description: `Palette Forge — ${meta.mode} · ${meta.harmony} · ${meta.algorithm}`,
+      $description: `Palette Crafter — ${meta.mode} · ${meta.harmony} · ${meta.algorithm}`,
       color,
     },
     null,

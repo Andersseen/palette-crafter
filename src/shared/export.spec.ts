@@ -120,7 +120,7 @@ describe("permalinkFor", () => {
       harmony: "triadic",
       algorithm: "v2",
     });
-    const url = new URL(permalinkFor(meta, "https://palette-forge.pages.dev"));
+    const url = new URL(permalinkFor(meta, "https://palette-crafter.pages.dev"));
 
     expect(url.searchParams.get("seed")).toBe("brand-a");
     expect(url.searchParams.get("mode")).toBe("dark");

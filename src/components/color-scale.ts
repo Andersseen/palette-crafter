@@ -67,68 +67,73 @@ import {
         </button>
       </div>
 
+      <!-- Compact squares on phones: eleven 3:4 cards two-per-row turned one
+           scale into six screens of scrolling. Detail appears as space allows. -->
       <div
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11 gap-4"
+        class="grid grid-cols-4 min-[420px]:grid-cols-6 sm:grid-cols-6 lg:grid-cols-11 gap-1.5 sm:gap-2 lg:gap-3"
       >
         @for (item of scaleItems(); track item.key) {
-          <div
-            class="group relative flex flex-col justify-between p-3 rounded-xl transition-all hover:scale-105 hover:shadow-lg cursor-pointer border border-black/5 dark:border-white/5 aspect-[3/4]"
+          <button
+            type="button"
+            class="group relative flex aspect-square flex-col justify-between overflow-hidden rounded-lg p-1.5 text-left transition-all hover:z-10 hover:scale-105 hover:shadow-lg border border-black/5 dark:border-white/5 sm:rounded-xl sm:p-2 lg:aspect-[3/4] lg:p-3"
             [style.background-color]="item.value"
             [style.color]="item.foreground"
+            [attr.aria-label]="
+              'Set ' + name() + ' to shade ' + item.key + ', ' + item.value
+            "
+            [attr.aria-pressed]="item.value === scale().DEFAULT"
             (click)="handleCardClick(item.value)"
           >
-            <div class="flex items-start justify-between gap-1">
-              <span class="text-sm font-bold opacity-90">{{ item.key }}</span>
-            </div>
+            <span class="text-[11px] font-bold opacity-90 sm:text-sm">
+              {{ item.key }}
+            </span>
 
-            <div class="flex flex-col gap-1 mt-auto">
-              <button
-                class="text-left text-[10px] font-mono opacity-60 hover:opacity-100 hover:font-bold transition-all truncate w-full"
+            <span class="mt-auto flex flex-col gap-0.5 lg:gap-1">
+              <span
+                class="hidden truncate font-mono text-[10px] opacity-70 sm:block"
                 (click)="copyToClipboard(item.value, $event)"
                 title="Copy HEX"
               >
                 {{ item.value.toUpperCase() }}
-              </button>
+              </span>
 
-              <button
-                class="text-left text-[10px] font-mono opacity-60 hover:opacity-100 hover:font-bold transition-all truncate w-full"
+              <span
+                class="hidden truncate font-mono text-[10px] opacity-60 hover:opacity-100 xl:block"
                 (click)="copyToClipboard(item.hsl, $event)"
                 title="Copy HSL"
               >
                 {{ item.hsl }}
-              </button>
+              </span>
 
-              <button
-                class="text-left text-[10px] font-mono opacity-60 hover:opacity-100 hover:font-bold transition-all truncate w-full"
+              <span
+                class="hidden truncate font-mono text-[10px] opacity-60 hover:opacity-100 xl:block"
                 (click)="copyToClipboard(item.oklab, $event)"
                 title="Copy Oklab"
               >
                 {{ item.oklab }}
-              </button>
-            </div>
+              </span>
+            </span>
 
             @if (item.value === scale().DEFAULT) {
-              <div
-                class="absolute inset-0 border-2 border-white/50 dark:border-black/50 rounded-xl pointer-events-none ring-2 ring-inset ring-black/20 dark:ring-white/20"
-              ></div>
-              <div class="absolute top-2 right-2">
-                <svg
-                  class="w-4 h-4 opacity-80"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="3"
-                    d="M5 13l4 4L19 7"
-                  ></path>
-                </svg>
-              </div>
+              <span
+                class="pointer-events-none absolute inset-0 rounded-lg border-2 border-white/50 ring-2 ring-inset ring-black/20 dark:border-black/50 dark:ring-white/20 sm:rounded-xl"
+              ></span>
+              <svg
+                class="absolute right-1 top-1 h-3 w-3 opacity-80 sm:right-2 sm:top-2 sm:h-4 sm:w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
             }
-          </div>
+          </button>
         }
       </div>
     </div>

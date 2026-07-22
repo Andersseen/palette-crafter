@@ -40,10 +40,10 @@ import { normalizeHex } from "@shared/utils";
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex w-full items-center gap-2 sm:w-auto">
         <input
           id="brand-hex"
-          class="w-32 rounded-md border border-foreground/20 bg-background px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          class="min-w-0 flex-1 rounded-md border border-foreground/20 bg-background px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary sm:w-32 sm:flex-none"
           [class.border-danger]="isInvalid()"
           placeholder="#ff6b35"
           autocomplete="off"
@@ -56,7 +56,7 @@ import { normalizeHex } from "@shared/utils";
 
         <button
           type="button"
-          class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          class="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           [disabled]="!canApply()"
           (click)="apply()"
         >
@@ -66,7 +66,7 @@ import { normalizeHex } from "@shared/utils";
         @if (active()) {
           <button
             type="button"
-            class="rounded-md border border-foreground/20 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-foreground/10"
+            class="shrink-0 rounded-md border border-foreground/20 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-foreground/10"
             (click)="clear()"
           >
             Clear

@@ -1,5 +1,5 @@
 /**
- * Public entry point of the `@palette-forge/core` package.
+ * Public entry point of the `@palette-crafter/core` package.
  *
  * Everything here is pure TypeScript with no dependencies and no Angular, DOM
  * or Node APIs, so it runs in a browser, on a worker and at build time. This is

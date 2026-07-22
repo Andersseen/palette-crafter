@@ -50,8 +50,10 @@ import type { BrandToken } from "@shared/types";
           (toggleThemeMode)="toggleThemeMode($event)"
         />
 
+        <!-- pb leaves room for the floating Theme Options button, which
+             otherwise sits on top of the last section on small screens. -->
         <main
-          class="flex-1 max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8"
+          class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 pb-24 sm:pb-28"
         >
           <app-hero-section
             [isDarkMode]="isDarkMode()"

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import ColorPalette from "./color-palette";
 import { calculateContrast } from "@shared/utils";
 
-const STORAGE_KEY = "palette-forge:last-theme";
+const STORAGE_KEY = "palette-crafter:last-theme";
 
 const create = (): ColorPalette => {
   TestBed.configureTestingModule({ providers: [ColorPalette] });

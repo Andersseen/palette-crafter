@@ -47,7 +47,7 @@ const COLOR_SCALE_SHADES = [
 /** Seed behind the palette a first-time visitor lands on. */
 const HOME_SEED = "palette-crafter-home";
 
-const STORAGE_KEY = "palette-forge:last-theme";
+const STORAGE_KEY = "palette-crafter:last-theme";
 
 @Injectable({ providedIn: "root" })
 export default class ColorPalette {

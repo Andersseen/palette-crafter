@@ -131,7 +131,7 @@ export default class ExportPanel {
     const anchor = document.createElement("a");
 
     anchor.href = url;
-    anchor.download = `palette-forge.${format.extension}`;
+    anchor.download = `palette-crafter.${format.extension}`;
     anchor.click();
 
     URL.revokeObjectURL(url);

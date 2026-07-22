@@ -1,10 +1,12 @@
-# Project context — Palette Forge
+# Project context — Palette Crafter
 
 > Read this first if it's your first time in the repo. It explains **why** the project exists, not the how (that's in [CONVENTIONS.md](./CONVENTIONS.md) and in the code).
 
 ## What it is
 
-Palette Forge (npm and repo name: `palette-forge`; until 2026-07-06 it was called `palette-crafter`, and traces of the old name may remain in seeds or in the old Cloudflare project) is an Angular + AnalogJS app that does two things with the same color generation engine:
+Palette Crafter (npm and repo name: `palette-crafter`, matching the GitHub remote `Andersseen/palette-crafter`) is an Angular + AnalogJS app that does two things with the same color generation engine:
+
+> **On the name.** An earlier version of this document claimed the project had been renamed to "Palette Forge" and that the GitHub repo was `Andersseen/palette-forge`. That was never true: the remote has always been `palette-crafter`. The `palette-forge` name reached `package.json`, `wrangler.jsonc`, the page title and these docs, while the repository, the directory and the home seed stayed `palette-crafter`. Unified back to **palette-crafter** on 2026-07-22. If you find `palette-forge` anywhere, it is a leftover, not the current name.
 
 1. **Visual playground** (`/`): a page where the user generates color themes (primary/secondary palette + status colors + background/text) and sees the result applied live to real UI components (`@voltui/components`).
 2. **HTTP API** (`/api/v1/theme`): the same generator exposed as a `GET`/`POST` endpoint so other apps can request a pre-computed theme (hex colors, 50–950 scales, accessible contrast) and use it in their own Tailwind config.
@@ -31,7 +33,7 @@ The project's golden rule: **the playground and the API can never diverge**, bec
 
 ## Relationship with `volt-ui`
 
-`@voltui/components` is an Angular component library (button, dialog, checkbox, separator, etc.) published by the same author (Andersseen); its source code lives in a sibling repo (`volt-ui/projects/volt/src/lib/components`). Palette Forge is, in part, a **real consumer / demo** of that library — use it as a reference for component APIs if you need to see how they're used (`VoltButton`, `VoltDialog`, `VoltCheckbox`, `VoltCard`, `VoltSeparator`, etc.), but **don't modify it from here**: changes to the components belong in the `volt-ui` repo, not in `palette-forge`.
+`@voltui/components` is an Angular component library (button, dialog, checkbox, separator, etc.) published by the same author (Andersseen); its source code lives in a sibling repo (`volt-ui/projects/volt/src/lib/components`). Palette Crafter is, in part, a **real consumer / demo** of that library — use it as a reference for component APIs if you need to see how they're used (`VoltButton`, `VoltDialog`, `VoltCheckbox`, `VoltCard`, `VoltSeparator`, etc.), but **don't modify it from here**: changes to the components belong in the `volt-ui` repo, not in `palette-crafter`.
 
 ## Related documents
 

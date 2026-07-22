@@ -10,10 +10,12 @@ import type { ColorSwatchType } from "@shared/types";
       class="group cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-95"
       (click)="copyToClipboard()"
     >
+      <!-- oklab and hsl are the longest strings here and the first to overflow
+           a phone; they reappear once there is room for them. -->
       @if (layout() === "row") {
-        <volt-card-content class="flex items-center gap-4 p-4">
+        <volt-card-content class="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
           <div
-            class="h-16 w-24 shrink-0 rounded-md border shadow-inner border-foreground/10 sm:w-32"
+            class="h-12 w-14 shrink-0 rounded-md border shadow-inner border-foreground/10 sm:h-16 sm:w-32"
             [style.background-color]="swatch().hex"
           ></div>
 
@@ -23,9 +25,13 @@ import type { ColorSwatchType } from "@shared/types";
             </h4>
             <div class="space-y-0.5 text-[10px] sm:text-xs opacity-70">
               <p class="font-mono">{{ swatch().hex.toUpperCase() }}</p>
-              <p class="font-mono truncate">{{ swatch().hsl }}</p>
-              <p class="font-mono truncate">{{ swatch().oklab }}</p>
-              <p class="font-mono">{{ swatch().cssVar }}</p>
+              <p class="hidden font-mono truncate sm:block">
+                {{ swatch().hsl }}
+              </p>
+              <p class="hidden font-mono truncate md:block">
+                {{ swatch().oklab }}
+              </p>
+              <p class="font-mono truncate">{{ swatch().cssVar }}</p>
             </div>
           </div>
 
@@ -36,9 +42,9 @@ import type { ColorSwatchType } from "@shared/types";
           </span>
         </volt-card-content>
       } @else {
-        <volt-card-content class="pt-6">
+        <volt-card-content class="pt-4 sm:pt-6">
           <div
-            class="w-full h-12 sm:h-16 rounded-md mb-2 sm:mb-3 border shadow-inner border-foreground/10"
+            class="w-full h-10 sm:h-16 rounded-md mb-2 sm:mb-3 border shadow-inner border-foreground/10"
             [style.background-color]="swatch().hex"
           ></div>
 
@@ -48,14 +54,18 @@ import type { ColorSwatchType } from "@shared/types";
             </h4>
             <div class="space-y-1 text-[10px] sm:text-xs opacity-70">
               <p class="font-mono">{{ swatch().hex.toUpperCase() }}</p>
-              <p class="font-mono">{{ swatch().hsl }}</p>
-              <p class="font-mono">{{ swatch().oklab }}</p>
-              <p class="font-mono">{{ swatch().cssVar }}</p>
+              <p class="hidden font-mono truncate sm:block">
+                {{ swatch().hsl }}
+              </p>
+              <p class="hidden font-mono truncate md:block">
+                {{ swatch().oklab }}
+              </p>
+              <p class="font-mono truncate">{{ swatch().cssVar }}</p>
             </div>
           </div>
 
           <div
-            class="mt-1 sm:mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            class="mt-1 hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:mt-2 sm:block"
           >
             <p class="text-[10px] sm:text-xs font-medium text-primary">
               {{ copied ? "Copied!" : "Click to copy" }}

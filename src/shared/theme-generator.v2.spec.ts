@@ -31,7 +31,7 @@ describe("v2 algorithm", () => {
   it("produces a genuinely lighter primary in dark mode", () => {
     // The v1 bug: `generateColorScale` forced every DEFAULT to HSL L=50, so the
     // dark-mode primary came out no lighter than the light-mode one.
-    for (const seed of ["brand-a", "acme", "palette-forge"]) {
+    for (const seed of ["brand-a", "acme", "palette-crafter"]) {
       const light = generateTheme({ seed, mode: "light", algorithm: "v2" });
       const dark = generateTheme({ seed, mode: "dark", algorithm: "v2" });
 

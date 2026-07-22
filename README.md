@@ -1,13 +1,13 @@
-# Palette Forge
+# Palette Crafter
 
-Palette Forge generates deterministic, accessible color palettes — as a visual
+Palette Crafter generates deterministic, accessible color palettes — as a visual
 playground, as an HTTP API, and as a zero-dependency npm package. All three run
 the same generator, so a palette is identical whichever way you ask for it.
 
 - **Playground** — start from a brand hex or a random seed, lock what you like,
   reroll the rest, see the WCAG audit, export in six formats, share the link.
 - **HTTP API** — `/api/v2/theme`, CORS-enabled and edge-cacheable.
-- **npm package** — `@palette-forge/core`, for generating themes at build time
+- **npm package** — `@palette-crafter/core`, for generating themes at build time
   with no network call.
 
 ## Stack
@@ -32,7 +32,7 @@ pnpm dev            # http://localhost:4200
 - `pnpm dev` — local development server.
 - `pnpm test` — run the test suite (`pnpm test:watch` for the watcher).
 - `pnpm build` — production build.
-- `pnpm build:core` — build the `@palette-forge/core` npm package into `dist/core`.
+- `pnpm build:core` — build the `@palette-crafter/core` npm package into `dist/core`.
 - `pnpm build:cf` — production build targeting the Cloudflare Pages preset.
 - `pnpm dev:cf` — local Cloudflare Pages preview.
 - `pnpm deploy:cf` — deploy to Cloudflare Pages.
@@ -164,11 +164,11 @@ disagree with each other.
 ## Using the generator directly
 
 ```bash
-npm install @palette-forge/core   # not published yet — see docs/STATE.md
+npm install @palette-crafter/core   # not published yet — see docs/STATE.md
 ```
 
 ```ts
-import { generateTheme, exportTheme } from "@palette-forge/core";
+import { generateTheme, exportTheme } from "@palette-crafter/core";
 
 const { theme, meta } = generateTheme({ baseColor: "#ff6b35", algorithm: "v2" });
 const css = exportTheme("tailwind", { theme, meta });

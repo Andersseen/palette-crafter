@@ -1,5 +1,5 @@
 {
-  "name": "palette-forge",
+  "name": "palette-crafter",
   "private": false,
   "description": "A lightweight tool to generate dynamic color palettes (background, foreground, primary, secondary) for Angular and Tailwind CSS v4.",
   "author": {
@@ -23,12 +23,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Andersseen/palette-forge.git"
+    "url": "https://github.com/Andersseen/palette-crafter.git"
   },
   "bugs": {
-    "url": "https://github.com/Andersseen/palette-forge/issues"
+    "url": "https://github.com/Andersseen/palette-crafter/issues"
   },
-  "homepage": "https://palette-forge.pages.dev",
+  "homepage": "https://palette-crafter.pages.dev",
   "scripts": {
     "dev": "CHOKIDAR_USEPOLLING=true ng serve",
     "start": "pnpm dev",

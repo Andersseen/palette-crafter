@@ -94,7 +94,7 @@ CSS variables are written on the server too, so the prerendered document ships
 with the palette already applied.
 
 **npm package.** `pnpm build:core` compiles `src/shared` to `dist/core` as
-`@palette-forge/core`. Generated rather than kept as a second source tree so
+`@palette-crafter/core`. Generated rather than kept as a second source tree so
 there is only ever one copy of the generator.
 
 ## Impact on existing contracts
@@ -125,11 +125,11 @@ there is only ever one copy of the generator.
 - [x] The prerendered document contains the palette (193 custom properties).
 - [x] Six export formats, all emitting literal values.
 - [x] A palette can be reproduced from its permalink.
-- [x] `@palette-forge/core` runs in plain Node with no dependencies.
+- [x] `@palette-crafter/core` runs in plain Node with no dependencies.
 
 ## Out of scope / follow-ups
 
-- **Publishing the npm package** and reserving the `@palette-forge` scope.
+- **Publishing the npm package** and reserving the `@palette-crafter` scope.
 - **Both modes in one export** — the CSS export covers the current mode only;
   emitting `:root` plus `.dark` in a single file needs generating both themes.
 - **The `Border` contrast check reports Fail** for the deliberately subtle

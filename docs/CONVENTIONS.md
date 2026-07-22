@@ -1,10 +1,10 @@
-# Conventions and hard rules — Palette Forge
+# Conventions and hard rules — Palette Crafter
 
 > Rules specific to this repo. These are not generic Angular style preferences: each one exists because breaking it breaks something concrete (SSR, the API, or UI/API parity). If you're about to do something that contradicts a rule here, stop and ask before continuing.
 
 ## 1. `src/shared/` must stay framework-agnostic
 
-`theme-generator.ts`, `utils.ts`, `types.ts`, `export.ts` and `contrast.ts` are imported by **three** consumers: the Angular client (via `@shared/*`), the h3/Nitro server handler (via relative imports), and the published npm package `@palette-forge/core` (built from this folder by `pnpm build:core`). This means:
+`theme-generator.ts`, `utils.ts`, `types.ts`, `export.ts` and `contrast.ts` are imported by **three** consumers: the Angular client (via `@shared/*`), the h3/Nitro server handler (via relative imports), and the published npm package `@palette-crafter/core` (built from this folder by `pnpm build:core`). This means:
 
 - Never import `@angular/*`, `window`, `document` or anything DOM-related inside `src/shared/`.
 - **No runtime-specific globals either.** `URLSearchParams` had to be removed from `export.ts` for exactly this reason — the package is compiled with `lib: ES2022` and no DOM, so it runs in browsers, workers and Node alike. Use `encodeURIComponent` and friends instead.
