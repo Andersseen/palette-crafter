@@ -49,7 +49,7 @@ type Panel = (typeof PANELS)[number];
     "(document:keydown)": "onKeydown($event)",
   },
   template: `
-    <div class="min-h-screen bg-background text-foreground">
+    <div class="flex min-h-screen flex-col bg-background text-foreground">
       <div
         #overlay
         id="theme-overlay"
@@ -77,8 +77,10 @@ type Panel = (typeof PANELS)[number];
         </div>
       }
 
+      <!-- Grows to fill the column so the footer stays at the bottom of the
+           viewport on short panels instead of floating mid-page. -->
       <main
-        class="mx-auto grid max-w-[1600px] gap-6 px-3 py-5 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8"
+        class="mx-auto grid w-full max-w-[1600px] flex-1 content-start gap-6 px-3 py-5 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8"
       >
         <!-- Left rail: the palette's identity, always visible while you work
              through the panels on the right. -->
