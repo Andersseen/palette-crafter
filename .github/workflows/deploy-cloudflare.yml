@@ -19,8 +19,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # v5 runs on Node 24. The @v4 actions still bundle Node 20, which the
+      # runner now warns is deprecated — the `node-version` below only sets the
+      # runtime for our own steps, not the one the actions themselves use.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -28,7 +31,7 @@ jobs:
           version: 10
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm

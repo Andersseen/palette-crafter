@@ -12,7 +12,7 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 
 - **Generation engine** (`src/shared/`): pure TypeScript, no Angular or DOM dependencies. Two algorithms:
   - **`v1` — frozen.** HSL scales on a fixed lightness ramp. Every seed in the wild depends on its exact output. Do not change it (see CONVENTIONS.md #2).
-  - **`v2` — current.** OKLCH perceptual scales, chroma tapering at both ends, gamut mapping by chroma reduction (never RGB clipping, which shifts hue). The input color is preserved *exactly* at the shade matching its lightness, so `baseColor` puts your real brand hex in the palette. Body text targets WCAG AAA (7:1). Base lightness is 0.52 light / 0.72 dark — chosen because those are the values where every hue agrees on white/black button labels.
+  - **`v2` — current.** OKLCH perceptual scales, chroma tapering at both ends, gamut mapping by chroma reduction (never RGB clipping, which shifts hue). The input color is preserved _exactly_ at the shade matching its lightness, so `baseColor` puts your real brand hex in the palette. Body text targets WCAG AAA (7:1). Base lightness is 0.52 light / 0.72 dark — chosen because those are the values where every hue agrees on white/black button labels.
   - Selected via `algorithm: "v1" | "v2"`, **defaulting to `v1`** so no existing consumer moves silently.
 - **Export module** (`src/shared/export.ts`): six formats — Tailwind v4 `@theme`, plain CSS variables, SCSS, JSON, shadcn/ui, and W3C Design Tokens. Emits **literal color values**, so a pasted snippet works in a project that does not have this app's runtime variables.
 - **Contrast module** (`src/shared/contrast.ts`): audits the pairs the theme actually renders, composites semi-transparent tokens at their real opacity, and — when a check fails — suggests the scale shade that would pass.
@@ -21,20 +21,18 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **Client state** (`src/services/color-palette.ts`, signals, `providedIn: root`): generates **in-process** from the shared generator — parity comes from the shared function, not from HTTP. Only calls the API when `THEME_API_BASE_URL` points at a remote instance, and then via GET.
 - **SSR + hydration**: zoneless, `provideClientHydration(withEventReplay())`, `/` prerendered. CSS variables are written on the server too, so **the prerendered document already carries the palette** (193 custom properties on `<html>`) — no flash of default colors.
 - **UI libraries**: `@voltui/components@0.6.0` for every base component and `angular-movement@0.5.0` for every animation, both by the same author and consumed here on purpose as a real integration test — see [LIB-FINDINGS.md](./LIB-FINDINGS.md).
-- **Theme reveal** (`src/services/theme-reveal.ts`): the circular wipe on generate/mode-switch. Paints the overlay with the *incoming* color, expands a clip-path circle from the click point to the furthest viewport corner, commits the palette while covered, then uncovers. Driven by `MoveTrigger.play()` promises, not `setTimeout`.
+- **Theme reveal** (`src/services/theme-reveal.ts`): the circular wipe on generate/mode-switch. Paints the overlay with the _incoming_ color, expands a clip-path circle from the click point to the furthest viewport corner, commits the palette while covered, then uncovers. Driven by `MoveTrigger.play()` promises, not `setTimeout`.
 - **Tests**: 110 across 8 files. `pnpm test`.
 - **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`.
 
 ## What's missing / broken (don't assume it works)
 
-- **No linter or formatter configured.** No `eslint.config.*` or `.prettierrc`. The existing code style is the only contract — imitate it.
-- **Only the service is covered by Angular tests.** `src/test-setup.ts` initialises the TestBed, so component tests are possible, but none exist.
-- **The `Border` contrast check reports Fail** for the deliberately subtle 0.2-alpha divider. This is reported honestly rather than hidden; if you want WCAG 1.4.11 compliance for non-text UI, the border token needs to be stronger.
-- **Exports cover the current mode only.** Emitting `:root` plus `.dark` in one file would require generating both themes.
-- **Verify the Cloudflare Pages project name.** `wrangler.jsonc.name` is now `palette-crafter` again (it briefly said `palette-forge`). Confirm a Pages project with that name exists — `wrangler pages project list` — or the CI deploy fails. If a stray `palette-forge` project was created while the name was wrong, it can be deleted.
-- **The home seed is `"palette-crafter-home"`** (`src/services/color-palette.ts`) and was deliberately left alone through the rename — the seed determines the output, so touching it would change the default palette.
-- **The localStorage key changed** from `palette-forge:last-theme` to `palette-crafter:last-theme`. Anyone with a cached palette silently gets a fresh one on next visit; harmless, since the palette also lives in the URL now.
-- **A single real page.** `/` is the only content route.
+- **No real tests.** `vite.config.ts` configures Vitest (`jsdom`, `include: ["**/*.spec.ts"]`, `setupFiles: ["src/test-setup.ts"]`) but **`src/test-setup.ts` does not exist** and **there is no `*.spec.ts` file in the repo**. Also `package.json` has no `test` script. If you're going to add tests, first create that setup file and decide how to run them (`vitest` directly, since there's no script wrapper).
+- **No linter or formatter configured.** There's no `.eslintrc`/`eslint.config.*` or `.prettierrc` in the repo. The current code style is the only "contract" — imitate it for consistency, don't invent new formatting rules.
+- **Naming/branding unified to `palette-forge` (2026-07-06)**: `package.json` (name, repository, bugs, homepage → `https://palette-forge.pages.dev`), `wrangler.jsonc`, `angular.json`, the HTML title, the UI `<h1>` and the `localStorage` key already use `palette-forge` / "Palette Forge"; the GitHub repo is `Andersseen/palette-forge` and the canonical deploy is Cloudflare Pages (the old Vercel URL was dropped). Two deliberate leftovers:
+  1. ~~Renaming `wrangler.jsonc.name` means the next deploy targets a Cloudflare Pages project named `palette-forge` — it must be created once.~~ **This is what broke CI** (2026-07-22): `wrangler pages deploy` cannot create a project non-interactively, so it failed with a bare `exit code 1`. Verified with `wrangler pages project list` — only `palette-crafter` exists; `palette-forge` returns `Project not found [code: 8000007]`. `wrangler.jsonc.name` now points back at **`palette-crafter`**, the project that actually exists and holds the current deploys. Before changing that name again, create the target project first.
+  2. The home page seed is still `"palette-crafter-home"` (`src/app/pages/(home).page.ts`) **on purpose**: changing the seed string would change the page's default colors (the seed determines the output — see CONVENTIONS.md #2).
+- **A single real page**: `src/app/pages/(home).page.ts` is the only content route (AnalogJS file-based routing). No additional routes yet.
 
 ## Architecture in 30 seconds
 
@@ -48,7 +46,7 @@ src/components/       → standalone Angular UI components
 src/app/pages/        → AnalogJS file-based routes
 ```
 
-Actual flow: user interacts → `ColorPalette` calls `generateTheme` in-process → signals update → CSS vars written to `documentElement` → permalink synced to the URL and theme cached in localStorage. External consumers hit `/api/v2/theme`, which calls the *same* `generateTheme`.
+Actual flow: user interacts → `ColorPalette` calls `generateTheme` in-process → signals update → CSS vars written to `documentElement` → permalink synced to the URL and theme cached in localStorage. External consumers hit `/api/v2/theme`, which calls the _same_ `generateTheme`.
 
 ## Testing
 
