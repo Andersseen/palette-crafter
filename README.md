@@ -1,14 +1,12 @@
 # Palette Crafter
 
 Palette Crafter generates deterministic, accessible color palettes — as a visual
-playground, as an HTTP API, and as a zero-dependency npm package. All three run
-the same generator, so a palette is identical whichever way you ask for it.
+playground and as an HTTP API. Both run the same generator, so a palette is
+identical whichever way you ask for it.
 
 - **Playground** — start from a brand hex or a random seed, lock what you like,
   reroll the rest, see the WCAG audit, export in six formats, share the link.
 - **HTTP API** — `/api/v2/theme`, CORS-enabled and edge-cacheable.
-- **npm package** — `@palette-crafter/core`, for generating themes at build time
-  with no network call.
 
 ## Stack
 
@@ -32,7 +30,6 @@ pnpm dev            # http://localhost:4200
 - `pnpm dev` — local development server.
 - `pnpm test` — run the test suite (`pnpm test:watch` for the watcher).
 - `pnpm build` — production build.
-- `pnpm build:core` — build the `@palette-crafter/core` npm package into `dist/core`.
 - `pnpm build:cf` — production build targeting the Cloudflare Pages preset.
 - `pnpm dev:cf` — local Cloudflare Pages preview.
 - `pnpm deploy:cf` — deploy to Cloudflare Pages.
@@ -161,26 +158,11 @@ In `v2` the body text pair targets 7:1 (AAA), and the primary button label
 resolves to the same color for every hue, so palettes from the same tool don't
 disagree with each other.
 
-## Using the generator directly
-
-```bash
-npm install @palette-crafter/core   # not published yet — see docs/STATE.md
-```
-
-```ts
-import { generateTheme, exportTheme } from "@palette-crafter/core";
-
-const { theme, meta } = generateTheme({ baseColor: "#ff6b35", algorithm: "v2" });
-const css = exportTheme("tailwind", { theme, meta });
-```
-
-Pure TypeScript, no dependencies, no DOM or Node globals — it runs in a browser,
-a worker, or at build time.
-
 ## Project structure
 
-- `src/shared/` — the generator, exports and contrast logic. Framework-agnostic;
-  also compiled into the npm package.
+- `src/shared/` — the generator, exports and contrast logic. Framework-agnostic
+  and free of environment-specific globals, since it runs in the browser, under
+  SSR, and inside the Cloudflare Worker.
 - `src/server/handlers/` — shared API logic (validation, CORS, caching).
 - `src/server/routes/api/` — thin route files for `v1` and `v2`.
 - `src/services/color-palette.ts` — Angular signal state; generates in-process.

@@ -36,7 +36,6 @@
     "build": "ng build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:core": "node scripts/build-core.mjs",
     "build:cf": "BUILD_PRESET=cloudflare-pages ng build",
     "dev:cf": "pnpm build:cf && wrangler pages dev",
     "deploy:cf": "pnpm build:cf && wrangler pages deploy"

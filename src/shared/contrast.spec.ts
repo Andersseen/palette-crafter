@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { blend, buildContrastReport, wcagLevel } from "./contrast.js";
-import { generateTheme } from "./theme-generator.js";
-import { calculateContrast } from "./utils.js";
+import { blend, buildContrastReport, wcagLevel } from "./contrast";
+import { generateTheme } from "./theme-generator";
+import { calculateContrast } from "./utils";
 
 describe("blend", () => {
   it("returns the endpoints at alpha 0 and 1", () => {

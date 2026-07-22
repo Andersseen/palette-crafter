@@ -6,8 +6,8 @@ import type {
   StatusColorName,
   Theme,
   WcagLevel,
-} from "./types.js";
-import { calculateContrast } from "./utils.js";
+} from "./types";
+import { calculateContrast } from "./utils";
 
 const SHADES = [
   50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950,

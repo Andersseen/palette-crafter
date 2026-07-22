@@ -1,4 +1,4 @@
-import type { ColorScale, HSLColor, OklabColor, OklchColor } from "./types.js";
+import type { ColorScale, HSLColor, OklabColor, OklchColor } from "./types";
 
 export const hexToRgb = (hex: string) => {
   const r = parseInt(hex.slice(1, 3), 16);

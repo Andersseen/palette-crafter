@@ -6,8 +6,8 @@ import {
   isExportFormat,
   permalinkFor,
   type ExportContext,
-} from "./export.js";
-import { generateTheme } from "./theme-generator.js";
+} from "./export";
+import { generateTheme } from "./theme-generator";
 
 const build = (overrides: Partial<ExportContext> = {}): ExportContext => {
   const { theme, meta } = generateTheme({

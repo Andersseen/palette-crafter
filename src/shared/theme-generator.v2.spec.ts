@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { generateTheme } from "./theme-generator.js";
-import { calculateContrast, hexToOklch } from "./utils.js";
-import type { HarmonyType, ThemeMode } from "./types.js";
+import { generateTheme } from "./theme-generator";
+import { calculateContrast, hexToOklch } from "./utils";
+import type { HarmonyType, ThemeMode } from "./types";
 
 const MODES: ThemeMode[] = ["light", "dark"];
 

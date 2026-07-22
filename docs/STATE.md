@@ -6,7 +6,7 @@
 
 ## One-sentence summary
 
-Angular 21 + AnalogJS app that generates deterministic, accessible color palettes, served in a visual playground (`/`), an HTTP API (`/api/v1/theme` frozen, `/api/v2/theme` current) and a publishable npm package, deployed on Cloudflare Pages.
+Angular 21 + AnalogJS app that generates deterministic, accessible color palettes, served in a visual playground (`/`) and an HTTP API (`/api/v1/theme` frozen, `/api/v2/theme` current), deployed on Cloudflare Pages.
 
 ## What exists and works
 
@@ -20,14 +20,12 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **Playground** (`src/components/*`, `src/app/pages/(home).page.ts`): brand-color input, per-token lock so you can keep the primary and reroll the rest, live accessibility report, export panel with format switcher, copy and download, shareable permalink.
 - **Client state** (`src/services/color-palette.ts`, signals, `providedIn: root`): generates **in-process** from the shared generator — parity comes from the shared function, not from HTTP. Only calls the API when `THEME_API_BASE_URL` points at a remote instance, and then via GET.
 - **SSR + hydration**: zoneless, `provideClientHydration(withEventReplay())`, `/` prerendered. CSS variables are written on the server too, so **the prerendered document already carries the palette** (193 custom properties on `<html>`) — no flash of default colors.
-- **npm package**: `pnpm build:core` compiles `src/shared` to `dist/core` as `@palette-crafter/core` (ESM + types, zero dependencies, verified running in plain Node). **Not yet published.**
 - **Tests**: 100 across 7 files. `pnpm test`.
 - **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`.
 
 ## What's missing / broken (don't assume it works)
 
 - **No linter or formatter configured.** No `eslint.config.*` or `.prettierrc`. The existing code style is the only contract — imitate it.
-- **The npm package is built but not published.** `@palette-crafter/core` needs the scope reserved and `npm publish dist/core --access public` run deliberately.
 - **Only the service is covered by Angular tests.** `src/test-setup.ts` initialises the TestBed, so component tests are possible, but none exist.
 - **The `Border` contrast check reports Fail** for the deliberately subtle 0.2-alpha divider. This is reported honestly rather than hidden; if you want WCAG 1.4.11 compliance for non-text UI, the border token needs to be stronger.
 - **Exports cover the current mode only.** Emitting `:root` plus `.dark` in one file would require generating both themes.
@@ -40,9 +38,7 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 
 ```
 src/shared/           → pure logic: color math, generator, exports, contrast.
-                        No Angular/DOM imports. Also shipped as an npm package.
-                        Internal imports use .js extensions so the built
-                        package is valid ESM.
+                        No Angular/DOM imports, no environment-specific globals.
 src/server/handlers/  → shared API logic (validation, CORS, caching)
 src/server/routes/    → thin h3/Nitro route files: api/v1/theme.ts, api/v2/theme.ts
 src/services/         → Angular state (signals); generates locally, HTTP only if configured
@@ -67,7 +63,6 @@ The most important file is `src/shared/theme-generator.contract.spec.ts`: it fre
 pnpm install
 pnpm dev            # http://localhost:4200
 pnpm build:cf && pnpm dev:cf   # preview with the Cloudflare Pages preset
-pnpm build:core     # build the npm package into dist/core
 ```
 
 ## Related documents

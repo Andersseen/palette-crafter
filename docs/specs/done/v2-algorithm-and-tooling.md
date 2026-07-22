@@ -93,9 +93,16 @@ only when `THEME_API_BASE_URL` points at a remote instance, and now uses GET.
 CSS variables are written on the server too, so the prerendered document ships
 with the palette already applied.
 
-**npm package.** `pnpm build:core` compiles `src/shared` to `dist/core` as
-`@palette-crafter/core`. Generated rather than kept as a second source tree so
-there is only ever one copy of the generator.
+**npm package — built, then removed.** `src/shared` was briefly packaged as
+`@palette-crafter/core` (built into `dist/core`, verified running in plain Node)
+so themes could be generated at build time with no network call. It was dropped
+on the author's call: nothing consumes themes that way today, and a published
+package is a support obligation with no current demand. `src/shared` stays
+internal, used by the playground and the API only.
+
+The one lasting trace: the packaging required `.js` extensions on the internal
+imports in `src/shared` (for valid ESM output). Those were reverted along with
+it — the convention had no remaining justification.
 
 ## Impact on existing contracts
 
@@ -125,11 +132,13 @@ there is only ever one copy of the generator.
 - [x] The prerendered document contains the palette (193 custom properties).
 - [x] Six export formats, all emitting literal values.
 - [x] A palette can be reproduced from its permalink.
-- [x] `@palette-crafter/core` runs in plain Node with no dependencies.
+- [x] ~~`@palette-crafter/core` runs in plain Node with no dependencies.~~
+      Achieved and then withdrawn — see the npm package note in Design.
 
 ## Out of scope / follow-ups
 
-- **Publishing the npm package** and reserving the `@palette-crafter` scope.
+- **Distributing the generator as a package** — deliberately dropped, not
+  pending. Revisit only if something concrete needs build-time generation.
 - **Both modes in one export** — the CSS export covers the current mode only;
   emitting `:root` plus `.dark` in a single file needs generating both themes.
 - **The `Border` contrast check reports Fail** for the deliberately subtle

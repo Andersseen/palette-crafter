@@ -4,12 +4,11 @@
 
 ## 1. `src/shared/` must stay framework-agnostic
 
-`theme-generator.ts`, `utils.ts`, `types.ts`, `export.ts` and `contrast.ts` are imported by **three** consumers: the Angular client (via `@shared/*`), the h3/Nitro server handler (via relative imports), and the published npm package `@palette-crafter/core` (built from this folder by `pnpm build:core`). This means:
+`theme-generator.ts`, `utils.ts`, `types.ts`, `export.ts` and `contrast.ts` are imported by **both** the Angular client (via `@shared/*`) **and** the h3/Nitro server handler (via relative imports). This means:
 
 - Never import `@angular/*`, `window`, `document` or anything DOM-related inside `src/shared/`.
-- **No runtime-specific globals either.** `URLSearchParams` had to be removed from `export.ts` for exactly this reason — the package is compiled with `lib: ES2022` and no DOM, so it runs in browsers, workers and Node alike. Use `encodeURIComponent` and friends instead.
-- Imports *inside* `src/shared/` carry the `.js` extension (`from "./utils.js"`). TypeScript and Vite resolve that to the `.ts` file; without it the compiled package is not valid ESM.
-- If you need to change the generation algorithm, remember the change affects the playground, the public API **and** the npm package at the same time.
+- **No environment-specific globals either.** This code runs in the browser, during SSR under Node, and inside the Cloudflare Worker that serves the API. `export.ts` builds its query strings with `encodeURIComponent` instead of `URLSearchParams` for that reason.
+- If you need to change the generation algorithm, remember the change affects the playground and the public API **at the same time** — there is no way to change one without the other.
 - The API handler (`src/server/handlers/theme.ts`) uses **relative** imports, not the `@shared/*` alias, even though the alias exists in `tsconfig.json`. That's the current pattern — keep it unless you explicitly verify that the Nitro/Cloudflare build resolves the alias correctly (don't assume it does just because it works in the Vite client).
 
 ## 2. The API's determinism contract is public — don't break it silently

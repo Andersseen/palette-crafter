@@ -5,8 +5,8 @@ import type {
   StatusColorName,
   Theme,
   ThemeApiMeta,
-} from "./types.js";
-import { hexToRgb } from "./utils.js";
+} from "./types";
+import { hexToRgb } from "./utils";
 
 export interface ExportContext {
   theme: Theme;
@@ -127,9 +127,9 @@ const resolveTokens = ({
 };
 
 /**
- * Query string is assembled by hand rather than with `URLSearchParams` so this
- * module stays free of any runtime-specific global and can be published as a
- * package that works in browsers, workers and Node alike.
+ * Query string is assembled by hand rather than with `URLSearchParams` to keep
+ * this module free of environment assumptions — `src/shared/` runs in the
+ * browser, during SSR, and inside the Cloudflare Worker that serves the API.
  */
 export const permalinkFor = (meta: ThemeApiMeta, origin = ""): string => {
   const params: Array<[string, string]> = [];

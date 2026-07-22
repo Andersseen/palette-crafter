@@ -8,14 +8,14 @@ import {
   hslToHex,
   normalizeHex,
   oklchToHex,
-} from "./utils.js";
+} from "./utils";
 import type {
   ColorScale,
   HarmonyType,
   Theme,
   ThemeAlgorithm,
   ThemeMode,
-} from "./types.js";
+} from "./types";
 
 export interface ThemeGenerationOptions {
   mode?: ThemeMode;

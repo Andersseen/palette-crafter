@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { generateTheme } from "./theme-generator.js";
-import type { HarmonyType, ThemeMode } from "./types.js";
+import { generateTheme } from "./theme-generator";
+import type { HarmonyType, ThemeMode } from "./types";
 
 /**
  * FROZEN PUBLIC CONTRACT — see docs/CONVENTIONS.md #2.
