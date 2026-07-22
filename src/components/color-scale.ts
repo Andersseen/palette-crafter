@@ -85,7 +85,7 @@ import {
         class="grid grid-cols-4 min-[420px]:grid-cols-6 sm:grid-cols-6 lg:grid-cols-11 gap-1.5 sm:gap-2 lg:gap-3"
         [moveStagger]="35"
       >
-        @for (item of scaleItems(); track item.key + "-" + version()) {
+        @for (item of scaleItems(); track item.key) {
           <button
             type="button"
             moveEnter="zoom-in"
@@ -161,8 +161,6 @@ export default class ColorScaleComponent {
   scale = input.required<ColorScale>();
   type = input.required<BrandToken>();
   locked = input(false);
-  /** Changes on every new palette so the cards recreate and replay motion. */
-  version = input(0);
 
   updateActive = output<string>();
   toggleLock = output<BrandToken>();

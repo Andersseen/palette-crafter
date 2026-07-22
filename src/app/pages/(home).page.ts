@@ -89,7 +89,7 @@ type Panel = (typeof PANELS)[number];
                 Base
               </h2>
               <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
-                @for (swatch of baseSwatches(); track swatch.cssVar + paletteVersion()) {
+                @for (swatch of baseSwatches(); track swatch.cssVar) {
                   <app-color-swatch [swatch]="swatch" layout="row" />
                 }
               </div>
@@ -102,7 +102,7 @@ type Panel = (typeof PANELS)[number];
                 Brand
               </h2>
               <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
-                @for (swatch of brandSwatches(); track swatch.cssVar + paletteVersion()) {
+                @for (swatch of brandSwatches(); track swatch.cssVar) {
                   <app-color-swatch [swatch]="swatch" layout="row" />
                 }
               </div>
@@ -114,7 +114,7 @@ type Panel = (typeof PANELS)[number];
                   Status
                 </h2>
                 <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
-                  @for (swatch of statusSwatches(); track swatch.cssVar + paletteVersion()) {
+                  @for (swatch of statusSwatches(); track swatch.cssVar) {
                     <app-color-swatch [swatch]="swatch" layout="row" />
                   }
                 </div>
@@ -124,11 +124,8 @@ type Panel = (typeof PANELS)[number];
         </aside>
 
         <div class="relative min-w-0">
-          <!-- Scoped reveal: generating sweeps the panel column only. The
-               command bar and the swatch rail stay visible and usable — the
-               rail restages itself through its own re-key animation. The mode
-               switch uses the full-viewport overlay above, because that really
-               does change the whole page. -->
+          <!-- Fallback overlay for browsers without the View Transitions API.
+               Scoped to the panel column so it never blanks the whole UI. -->
           <div
             #paletteOverlay
             class="palette-overlay"
@@ -176,7 +173,6 @@ type Panel = (typeof PANELS)[number];
                     type="primary"
                     [scale]="primaryScale()"
                     [locked]="locked().primary"
-                    [version]="paletteVersion()"
                     (updateActive)="updateActiveColor('primary', $event)"
                     (toggleLock)="toggleLock($event)"
                   />
@@ -193,7 +189,6 @@ type Panel = (typeof PANELS)[number];
                     type="secondary"
                     [scale]="secondaryScale()"
                     [locked]="locked().secondary"
-                    [version]="paletteVersion()"
                     (updateActive)="updateActiveColor('secondary', $event)"
                     (toggleLock)="toggleLock($event)"
                   />
@@ -277,9 +272,6 @@ export default class Home {
       .filter((s) => s.name === "Background" || s.name === "Foreground"),
   );
 
-  /** Folded into `track` so a new palette recreates the cards and replays motion. */
-  paletteVersion = computed(() => this.colorService.paletteVersion());
-
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
   colorModes = computed(() => this.colorService.selectedColorModes());
@@ -324,12 +316,14 @@ export default class Home {
   }
 
   /**
-   * Generating sweeps the new primary across the workspace only.
+   * Generating reveals the new palette over the old one.
    *
-   * Same circular wipe as the mode switch, but scoped to the palette area
-   * instead of the viewport — covering the entire UI hid the very thing you
-   * asked to see. The swatches and scale cards also re-key off
-   * `paletteVersion`, so they cascade back in as the overlay lifts.
+   * Uses the same View Transition as the mode switch. The previous version
+   * painted a solid slab over the workspace, committed behind it and then faded
+   * it out: measured frame by frame the palette only changed at ~500ms, the
+   * overlay was still at 0.03 opacity past 800ms, and the card cascade ran
+   * hidden underneath it. Revealing needs both palettes on screen at once,
+   * which only the snapshot mechanism provides.
    */
   async generatePalette(ev?: MouseEvent): Promise<void> {
     if (this.isLoading()) {
@@ -344,13 +338,25 @@ export default class Home {
       return;
     }
 
-    await this.reveal.run(this.paletteMotion(), this.paletteOverlay(), {
-      color: pending.theme.primary.DEFAULT,
-      origin: this.reveal.originOf(ev),
-      commit: () => this.colorService.commit(pending),
-      fadeOut: true,
-      scope: "element",
-    });
+    const origin = this.reveal.originOf(ev);
+    const commit = () => this.colorService.commit(pending);
+
+    // Shorter than the mode switch: generating is a repeat action (hold G).
+    const revealed = await this.reveal.revealWithViewTransition(
+      commit,
+      origin,
+      380,
+    );
+
+    if (!revealed) {
+      await this.reveal.run(this.paletteMotion(), this.paletteOverlay(), {
+        color: pending.theme.primary.DEFAULT,
+        origin,
+        commit,
+        fadeOut: true,
+        scope: "element",
+      });
+    }
   }
 
   /**

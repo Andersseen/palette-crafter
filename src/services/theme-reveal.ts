@@ -214,6 +214,11 @@ export default class ThemeReveal {
         await trigger.play({ opacity: [1, 0] });
       }
     } finally {
+      // `reset()` first: a finished WAAPI animation keeps filling its final
+      // value and outranks inline styles, so setting opacity here alone left
+      // the overlay lingering at a few thousandths for over a second.
+      trigger.reset();
+
       // Always restore the hidden state, even if the animation was cancelled
       // by a second click — otherwise the overlay stays covering the page.
       element.dataset["revealing"] = "false";

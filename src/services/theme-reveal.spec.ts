@@ -13,14 +13,17 @@ const create = (): ThemeReveal => {
 /** Minimal stand-in for MoveTriggerDirective: records the frames it is given. */
 const fakeTrigger = () => {
   const plays: Array<Record<string, unknown>> = [];
+  const reset = vi.fn();
 
   return {
     directive: {
       play: vi.fn(async (frames?: Record<string, unknown>) => {
         plays.push(frames ?? {});
       }),
+      reset,
     } as unknown as MoveTriggerDirective,
     plays,
+    reset,
   };
 };
 
@@ -241,6 +244,24 @@ describe("run", () => {
     expect(withFade.plays).toHaveLength(2);
     expect(withFade.plays[1]).toEqual({ opacity: [1, 0] });
     expect(withoutFade.plays).toHaveLength(1);
+  });
+
+  it("cancels the animation so it stops overriding the hidden state", async () => {
+    const service = create();
+    const { directive, reset } = fakeTrigger();
+    const overlay = fakeOverlay();
+
+    await service.run(directive, overlay, {
+      color: "#000000",
+      commit: () => undefined,
+      fadeOut: true,
+    });
+
+    // A finished WAAPI animation keeps filling its final value and outranks
+    // inline styles: without this the overlay lingered at ~0.003 opacity for
+    // over a second after the reveal, still clipped to full size.
+    expect(reset).toHaveBeenCalled();
+    expect(overlay.nativeElement.style.opacity).toBe("0");
   });
 
   it("hides the overlay again even if the animation throws", async () => {
