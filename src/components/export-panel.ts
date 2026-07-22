@@ -1,13 +1,29 @@
 import { isPlatformBrowser } from "@angular/common";
 import { Component, PLATFORM_ID, computed, inject, signal } from "@angular/core";
-import { VoltCard, VoltCardContent } from "@voltui/components";
+import {
+  VoltButton,
+  VoltCard,
+  VoltCardContent,
+  VoltTabs,
+  VoltTabsList,
+  VoltTabsTrigger,
+} from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import { EXPORT_FORMATS } from "@shared/export";
 import type { ExportFormat } from "@shared/types";
 
 @Component({
   selector: "app-export-panel",
-  imports: [VoltCard, VoltCardContent],
+  imports: [
+    VoltButton,
+    VoltCard,
+    VoltCardContent,
+    VoltTabs,
+    VoltTabsList,
+    VoltTabsTrigger,
+    ...MOVEMENT_DIRECTIVES,
+  ],
   template: `
     <div class="space-y-3 sm:space-y-4 px-2 sm:px-0">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -15,47 +31,44 @@ import type { ExportFormat } from "@shared/types";
         <p class="text-xs sm:text-sm opacity-70">{{ activeFormat().description }}</p>
       </div>
 
-      <div class="flex flex-wrap gap-2" role="tablist" aria-label="Export format">
-        @for (format of formats; track format.id) {
-          <button
-            type="button"
-            role="tab"
-            class="rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
-            [class.bg-primary]="format.id === selected()"
-            [class.text-primary-foreground]="format.id === selected()"
-            [class.border-transparent]="format.id === selected()"
-            [class.border-foreground\\/20]="format.id !== selected()"
-            [attr.aria-selected]="format.id === selected()"
-            (click)="select(format.id)"
-          >
-            {{ format.label }}
-          </button>
-        }
-      </div>
+      <volt-tabs [value]="selected()" (valueChange)="onTabChange($event)">
+        <volt-tabs-list class="flex-wrap" aria-label="Export format">
+          @for (format of formats; track format.id) {
+            <volt-tabs-trigger [value]="format.id">
+              {{ format.label }}
+            </volt-tabs-trigger>
+          }
+        </volt-tabs-list>
+      </volt-tabs>
 
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <button
-          class="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-md font-medium transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-primary text-primary-foreground focus:ring-primary"
+        <volt-button
+          class="w-full sm:w-auto"
+          [moveWhileTap]="{ scale: [1, 0.96] }"
           (click)="copy()"
         >
           {{ copyLabel() }}
-        </button>
+        </volt-button>
 
-        <button
-          class="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-md border border-foreground/20 font-medium transition-colors hover:bg-foreground/10"
+        <volt-button
+          variant="outline"
+          class="w-full sm:w-auto"
+          [moveWhileTap]="{ scale: [1, 0.96] }"
           (click)="download()"
         >
           Download .{{ activeFormat().extension }}
-        </button>
+        </volt-button>
 
         @if (permalink(); as link) {
-          <button
-            class="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-md border border-foreground/20 font-medium transition-colors hover:bg-foreground/10"
+          <volt-button
+            variant="outline"
+            class="w-full sm:w-auto"
             [title]="link"
+            [moveWhileTap]="{ scale: [1, 0.96] }"
             (click)="copyPermalink()"
           >
             {{ permalinkLabel() }}
-          </button>
+          </volt-button>
         }
       </div>
 
@@ -86,8 +99,11 @@ export default class ExportPanel {
     () => this.formats.find((entry) => entry.id === this.selected())!,
   );
 
-  select(format: ExportFormat): void {
-    this.colorService.setExportFormat(format);
+  /** `volt-tabs` emits the raw trigger value, which is the format id. */
+  onTabChange(value: string | undefined): void {
+    if (value) {
+      this.colorService.setExportFormat(value as ExportFormat);
+    }
   }
 
   async copy(): Promise<void> {

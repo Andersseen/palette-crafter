@@ -132,37 +132,24 @@
     --color-secondary: #34d399;
   }
 } */
+/*
+ * Theme reveal overlay.
+ *
+ * Fixed and above the page, not `z-index: -1` behind it: the circular wipe is
+ * meant to be seen. Geometry and playback are driven from TypeScript through
+ * angular-movement (clip-path animated via WAAPI), so there are no @keyframes
+ * here — the radius depends on where you clicked and cannot be expressed in
+ * static CSS.
+ */
 #theme-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 60;
   pointer-events: none;
-  clip-path: circle(0 at var(--x) var(--y));
+  opacity: 0;
+  clip-path: circle(0px at 50vw 50vh);
 }
 
-@keyframes reveal {
-  from {
-    clip-path: circle(0 at var(--x) var(--y));
-  }
-  to {
-    clip-path: circle(100% at var(--x) var(--y));
-  }
-}
-@keyframes reveal-back {
-  0% {
-    clip-path: circle(0 at var(--x) var(--y));
-  }
-  50% {
-    clip-path: circle(150% at var(--x) var(--y));
-  }
-  100% {
-    clip-path: circle(0 at var(--x) var(--y));
-  }
-}
-
-.theme-animating #theme-overlay {
-  animation: reveal 150ms ease-in forwards;
-}
-.theme-generate-animating #theme-overlay {
-  animation: reveal-back 300ms ease-in-out forwards;
+#theme-overlay[data-revealing="true"] {
+  opacity: 1;
 }

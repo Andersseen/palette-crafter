@@ -1,14 +1,14 @@
-import { isPlatformBrowser } from "@angular/common";
 import {
   Component,
-  DOCUMENT,
   ElementRef,
-  PLATFORM_ID,
   computed,
   inject,
   viewChild,
 } from "@angular/core";
+import { VoltButton } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES, MoveTriggerDirective } from "angular-movement";
 import ColorPalette from "@services/color-palette";
+import ThemeReveal from "@services/theme-reveal";
 
 import BrandColorInput from "@components/brand-color-input";
 import ColorSwatch from "@components/color-swatch";
@@ -20,12 +20,13 @@ import Header from "@components/header";
 import HeroSection from "@components/hero-section";
 import ThemePreview from "@components/theme-preview";
 import ThemeOptions from "@components/theme-options";
-import { hexToRgb } from "@shared/utils";
 import type { BrandToken } from "@shared/types";
 
 @Component({
   selector: "app-home",
   imports: [
+    ...MOVEMENT_DIRECTIVES,
+    VoltButton,
     ThemePreview,
     BrandColorInput,
     ColorSwatch,
@@ -41,7 +42,15 @@ import type { BrandToken } from "@shared/types";
     <section
       class="relative isolate min-h-screen overflow-x-hidden bg-background text-foreground"
     >
-      <div #overlay id="theme-overlay" aria-hidden="true"></div>
+      <div
+        #overlay
+        id="theme-overlay"
+        aria-hidden="true"
+        [moveTrigger]="false"
+        [moveFrames]="{}"
+        [moveDuration]="520"
+        moveEasing="cubic-bezier(0.22, 1, 0.36, 1)"
+      ></div>
 
       <div class="blend-contrast flex min-h-screen flex-col">
         <app-header
@@ -69,21 +78,23 @@ import type { BrandToken } from "@shared/types";
             <div
               class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm shadow-sm"
               role="alert"
+              moveEnter="fade-down"
             >
               <p class="opacity-80">{{ message }}</p>
-              <button
-                class="inline-flex shrink-0 items-center justify-center rounded-md border border-foreground/20 px-3 py-2 font-medium hover:bg-foreground/10 disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
+              <volt-button
+                variant="outline"
+                size="sm"
+                class="shrink-0"
                 [disabled]="isLoading()"
                 (click)="retryTheme()"
               >
                 Retry
-              </button>
+              </volt-button>
             </div>
           }
 
           <!-- Base Colors (Bg/Fg) -->
-          <section class="mb-8 sm:mb-12">
+          <section class="mb-8 sm:mb-12" moveInView="fade-up" [moveStagger]="60">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
               Base Colors
             </h2>
@@ -97,7 +108,7 @@ import type { BrandToken } from "@shared/types";
           </section>
 
           <!-- Color Scales -->
-          <section class="mb-8 sm:mb-12 space-y-8">
+          <section class="mb-8 sm:mb-12 space-y-8" moveInView="fade-up">
             <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
               Brand Colors
             </h2>
@@ -156,7 +167,7 @@ import type { BrandToken } from "@shared/types";
           </section>
 
           @if (statusSwatches().length > 0) {
-            <section class="mb-8 sm:mb-12">
+            <section class="mb-8 sm:mb-12" moveInView="fade-up">
               <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
                 Status Colors
               </h2>
@@ -170,15 +181,15 @@ import type { BrandToken } from "@shared/types";
             </section>
           }
 
-          <section class="mb-8 sm:mb-12">
+          <section class="mb-8 sm:mb-12" moveInView="fade-up">
             <app-contrast-report />
           </section>
 
-          <section class="mb-8 sm:mb-12">
+          <section class="mb-8 sm:mb-12" moveInView="fade-up">
             <app-theme-preview />
           </section>
 
-          <section>
+          <section moveInView="fade-up">
             <app-export-panel />
           </section>
         </main>
@@ -192,11 +203,10 @@ import type { BrandToken } from "@shared/types";
 })
 export default class Home {
   private readonly colorService = inject(ColorPalette);
-  private readonly document = inject(DOCUMENT);
-  private readonly platformId = inject(PLATFORM_ID);
-  private readonly root = this.document.documentElement;
+  private readonly reveal = inject(ThemeReveal);
 
-  overlay = viewChild<ElementRef<HTMLElement>>("overlay");
+  overlay = viewChild.required<ElementRef<HTMLElement>>("overlay");
+  private overlayMotion = viewChild.required(MoveTriggerDirective);
 
   isDarkMode = computed(() => this.colorService.mode() === "dark");
   isLoading = computed(() => this.colorService.isLoading());
@@ -224,44 +234,59 @@ export default class Home {
   // from this constructor is what used to overwrite a restored palette and
   // make the cache pointless.
 
+  /**
+   * Generating sweeps the new primary across the page, then dissolves to show
+   * the palette it produced — the brand color announces itself first.
+   */
   async generatePalette(ev?: MouseEvent): Promise<void> {
     if (this.isLoading()) {
       return;
     }
 
-    this.setOrigin(ev);
-    const updated = await this.colorService.reroll();
+    const pending = await this.colorService.prepare({
+      seed: this.colorService.mintSeed(),
+    });
 
-    if (!updated || !isPlatformBrowser(this.platformId)) {
+    if (!pending) {
       return;
     }
 
-    this.overlay()!.nativeElement.style.background = `rgba(${hexToRgb(
-      this.colorService.theme().primary.DEFAULT,
-    )} / 0.2)`;
-
-    this.animate("theme-generate-animating", 300);
+    await this.reveal.run(this.overlayMotion(), this.overlay(), {
+      color: pending.theme.primary.DEFAULT,
+      origin: this.reveal.originOf(ev),
+      commit: () => this.colorService.commit(pending),
+      fadeOut: true,
+    });
   }
 
+  /**
+   * Switching mode wipes straight to the incoming background, so the old and
+   * new themes never appear on screen at the same time.
+   */
   async toggleThemeMode(ev?: MouseEvent): Promise<void> {
     if (this.isLoading()) {
       return;
     }
 
-    this.setOrigin(ev);
-    const updated = await this.colorService.toggleThemeMode();
+    const meta = this.colorService.meta();
+    const pending = await this.colorService.prepare({
+      mode: this.isDarkMode() ? "light" : "dark",
+      seed: meta?.seed,
+      harmony: meta?.harmony,
+      ...(meta?.baseColor
+        ? { baseColor: meta.baseColor }
+        : { baseHue: meta?.baseHue }),
+    });
 
-    if (!updated || !isPlatformBrowser(this.platformId)) {
+    if (!pending) {
       return;
     }
 
-    this.overlay()!.nativeElement.style.background = `rgb(${hexToRgb(
-      this.colorService.theme().bg,
-    )})`;
-
-    this.animate("theme-animating", 150, () =>
-      this.colorService.updateCSSVariables(),
-    );
+    await this.reveal.run(this.overlayMotion(), this.overlay(), {
+      color: pending.theme.bg,
+      origin: this.reveal.originOf(ev),
+      commit: () => this.colorService.commit(pending),
+    });
   }
 
   updateActiveColor(type: BrandToken, shade: string): void {
@@ -273,20 +298,6 @@ export default class Home {
   }
 
   retryTheme(): void {
-    void this.colorService.reroll();
-  }
-
-  /** Anchors the reveal animation on the click position. */
-  private setOrigin(ev?: MouseEvent): void {
-    this.root.style.setProperty("--x", ev ? `${ev.clientX}px` : "50vw");
-    this.root.style.setProperty("--y", ev ? `${ev.clientY}px` : "50vh");
-  }
-
-  private animate(className: string, duration: number, done?: () => void): void {
-    this.root.classList.add(className);
-    setTimeout(() => {
-      this.root.classList.remove(className);
-      done?.();
-    }, duration);
+    void this.generatePalette();
   }
 }

@@ -2,14 +2,17 @@ import { isPlatformBrowser } from "@angular/common";
 import { Component, PLATFORM_ID, computed, inject } from "@angular/core";
 import {
   VoltButton,
-  VoltCheckbox,
   VoltDialog,
   VoltDialogContent,
   VoltDialogDescription,
   VoltDialogOverlay,
   VoltDialogTitle,
   VoltSeparator,
+  VoltSwitch,
+  VoltToggleGroup,
+  VoltToggleGroupItem,
 } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import type { ColorTokenMode, StatusColorName } from "@shared/types";
 
@@ -17,13 +20,16 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
   selector: "app-theme-options",
   imports: [
     VoltButton,
-    VoltCheckbox,
     VoltDialog,
     VoltDialogContent,
     VoltDialogDescription,
     VoltDialogOverlay,
     VoltDialogTitle,
     VoltSeparator,
+    VoltSwitch,
+    VoltToggleGroup,
+    VoltToggleGroupItem,
+    ...MOVEMENT_DIRECTIVES,
   ],
   template: `
     @if (isBrowser) {
@@ -70,22 +76,20 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
                     {{ token }}
                   </span>
 
-                  <div class="flex gap-2">
-                    <volt-button
-                      size="sm"
-                      [variant]="colorModes()[token] === 'single' ? 'solid' : 'outline'"
-                      (click)="setColorMode(token, 'single')"
-                    >
+                  <!-- A toggle group carries the "pick exactly one" semantics
+                       that two independent buttons only imitated. -->
+                  <volt-toggle-group
+                    type="single"
+                    [value]="[colorModes()[token]]"
+                    (valueChange)="onColorMode(token, $event)"
+                  >
+                    <volt-toggle-group-item value="single" size="sm">
                       Single
-                    </volt-button>
-                    <volt-button
-                      size="sm"
-                      [variant]="colorModes()[token] === 'scale' ? 'solid' : 'outline'"
-                      (click)="setColorMode(token, 'scale')"
-                    >
+                    </volt-toggle-group-item>
+                    <volt-toggle-group-item value="scale" size="sm">
                       Scale
-                    </volt-button>
-                  </div>
+                    </volt-toggle-group-item>
+                  </volt-toggle-group>
                 </div>
               }
             </section>
@@ -97,16 +101,16 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
                 Status Colors
               </h3>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid gap-3 sm:grid-cols-2">
                 @for (status of statusTokens; track status) {
                   <label
-                    class="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-3 text-sm text-foreground hover:bg-accent"
+                    class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-3 text-sm text-foreground hover:bg-accent"
                   >
-                    <volt-checkbox
+                    <span class="capitalize">{{ status }}</span>
+                    <volt-switch
                       [checked]="enabledStatusColors()[status]"
                       (checkedChange)="setStatusColor(status, $event)"
                     />
-                    <span class="capitalize">{{ status }}</span>
                   </label>
                 }
               </div>
@@ -128,8 +132,17 @@ export default class ThemeOptions {
   colorModes = computed(() => this.colorService.selectedColorModes());
   enabledStatusColors = computed(() => this.colorService.enabledStatusColors());
 
-  setColorMode(token: "primary" | "secondary", mode: ColorTokenMode): void {
-    this.colorService.setColorTokenMode(token, mode);
+  /**
+   * `volt-toggle-group` always emits an array, even in `single` mode, and emits
+   * an empty one when the active item is deselected — which we ignore so a
+   * token always has a mode.
+   */
+  onColorMode(token: "primary" | "secondary", value: string[]): void {
+    const mode = value[0] as ColorTokenMode | undefined;
+
+    if (mode) {
+      this.colorService.setColorTokenMode(token, mode);
+    }
   }
 
   setStatusColor(status: StatusColorName, enabled: boolean): void {

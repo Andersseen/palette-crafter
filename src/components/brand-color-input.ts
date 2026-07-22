@@ -1,4 +1,6 @@
 import { Component, computed, inject, signal } from "@angular/core";
+import { VoltButton, VoltInput, VoltLabel } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import { normalizeHex } from "@shared/utils";
 
@@ -11,6 +13,7 @@ import { normalizeHex } from "@shared/utils";
  */
 @Component({
   selector: "app-brand-color-input",
+  imports: [VoltButton, VoltInput, VoltLabel, ...MOVEMENT_DIRECTIVES],
   template: `
     <div
       class="flex flex-col gap-3 rounded-lg border border-foreground/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
@@ -31,9 +34,9 @@ import { normalizeHex } from "@shared/utils";
         </label>
 
         <div class="flex flex-col">
-          <label class="text-sm font-medium" for="brand-hex">
+          <volt-label htmlFor="brand-hex" [error]="isInvalid()">
             Start from a brand color
-          </label>
+          </volt-label>
           <span class="text-xs opacity-60">
             The exact hex is kept in the generated scale.
           </span>
@@ -41,36 +44,37 @@ import { normalizeHex } from "@shared/utils";
       </div>
 
       <div class="flex w-full items-center gap-2 sm:w-auto">
-        <input
+        <volt-input
           id="brand-hex"
-          class="min-w-0 flex-1 rounded-md border border-foreground/20 bg-background px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary sm:w-32 sm:flex-none"
-          [class.border-danger]="isInvalid()"
+          class="min-w-0 flex-1 font-mono sm:w-32 sm:flex-none"
           placeholder="#ff6b35"
           autocomplete="off"
-          spellcheck="false"
           [value]="draft()"
           [attr.aria-invalid]="isInvalid()"
-          (input)="onType($event)"
+          (valueChange)="onValue($event)"
           (keydown.enter)="apply()"
         />
 
-        <button
-          type="button"
-          class="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        <volt-button
+          size="sm"
+          class="shrink-0"
           [disabled]="!canApply()"
+          [moveWhileTap]="{ scale: [1, 0.95] }"
           (click)="apply()"
         >
           Apply
-        </button>
+        </volt-button>
 
         @if (active()) {
-          <button
-            type="button"
-            class="shrink-0 rounded-md border border-foreground/20 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-foreground/10"
+          <volt-button
+            size="sm"
+            variant="outline"
+            class="shrink-0"
+            [moveWhileTap]="{ scale: [1, 0.95] }"
             (click)="clear()"
           >
             Clear
-          </button>
+          </volt-button>
         }
       </div>
     </div>
@@ -97,8 +101,9 @@ export default class BrandColorInput {
 
   canApply = computed(() => normalizeHex(this.draft()) !== null);
 
-  onType(event: Event): void {
-    this.draftState.set((event.target as HTMLInputElement).value);
+  /** `volt-input` exposes `value` as a model signal, so it emits the string. */
+  onValue(value: string): void {
+    this.draftState.set(value);
   }
 
   onPick(event: Event): void {

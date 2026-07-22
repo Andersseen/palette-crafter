@@ -1,21 +1,30 @@
 import { Component, input, output } from "@angular/core";
+import { VoltButton } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 
 @Component({
   selector: "app-hero-section",
-  standalone: true,
+  imports: [VoltButton, ...MOVEMENT_DIRECTIVES],
   template: `
     <section class="text-center mb-8 sm:mb-12 px-2">
-      <button
-        class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-lg transition-all duration-200 hover:opacity-90 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-offset-2 shadow-lg bg-primary text-primary-contrast disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-        (click)="generatePalette.emit($event)"
+      <!-- Hover/tap feedback comes from angular-movement rather than a
+           hover:scale utility, so it obeys prefers-reduced-motion. -->
+      <volt-button
+        size="lg"
+        class="w-full sm:w-auto"
         [disabled]="isLoading()"
+        [moveWhileHover]="{ scale: [1, 1.04] }"
+        [moveWhileTap]="{ scale: [1, 0.97] }"
+        [moveDuration]="180"
+        (click)="generatePalette.emit($event)"
       >
         <svg
           class="w-5 h-5 mr-2"
-          [class.animate-spin]="isLoading()"
+          [moveLoop]="isLoading() ? 'spin' : 'none'"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path
             stroke-linecap="round"
@@ -25,7 +34,8 @@ import { Component, input, output } from "@angular/core";
           ></path>
         </svg>
         {{ isLoading() ? "Generating..." : "Generate New Palette" }}
-      </button>
+      </volt-button>
+
       <p class="mt-3 sm:mt-4 text-xs sm:text-sm opacity-60">
         {{ isDarkMode() ? "Dark" : "Light" }} mode • WCAG AA compliant •
         Harmonious colors

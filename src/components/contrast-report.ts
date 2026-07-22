@@ -1,4 +1,6 @@
 import { Component, computed, inject } from "@angular/core";
+import { VoltBadge } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import type { WcagLevel } from "@shared/types";
 
@@ -10,6 +12,7 @@ import type { WcagLevel } from "@shared/types";
  */
 @Component({
   selector: "app-contrast-report",
+  imports: [VoltBadge, ...MOVEMENT_DIRECTIVES],
   template: `
     <div class="space-y-3 sm:space-y-4">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -20,10 +23,11 @@ import type { WcagLevel } from "@shared/types";
         </p>
       </div>
 
-      <ul class="grid gap-2 sm:grid-cols-2">
+      <ul class="grid gap-2 sm:grid-cols-2" [moveStagger]="40">
         @for (check of report().checks; track check.label) {
           <li
             class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+            moveInView="fade-up"
             [class.border-foreground\\/15]="check.passes"
             [class.border-danger]="!check.passes"
           >
@@ -56,12 +60,9 @@ import type { WcagLevel } from "@shared/types";
               <span class="font-mono text-xs opacity-70">
                 {{ check.ratio }}:1
               </span>
-              <span
-                class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                [class]="badgeClass(check.level)"
-              >
+              <volt-badge [variant]="badgeVariant(check.level)">
                 {{ check.level }}
-              </span>
+              </volt-badge>
             </div>
           </li>
         }
@@ -74,16 +75,20 @@ export default class ContrastReport {
 
   report = computed(() => this.colorService.contrastReport());
 
-  badgeClass(level: WcagLevel): string {
+  /**
+   * Volt badges only offer four variants, so "AA Large" (a partial pass) has
+   * to share `outline` with nothing else rather than getting a warning colour.
+   */
+  badgeVariant(level: WcagLevel): "solid" | "secondary" | "outline" | "destructive" {
     switch (level) {
       case "AAA":
-        return "bg-success text-success-foreground";
+        return "solid";
       case "AA":
-        return "bg-success/70 text-success-foreground";
+        return "secondary";
       case "AA Large":
-        return "bg-warning text-warning-foreground";
+        return "outline";
       case "Fail":
-        return "bg-danger text-danger-foreground";
+        return "destructive";
     }
   }
 }

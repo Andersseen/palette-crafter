@@ -1,4 +1,6 @@
 import { Component, computed, input, output } from "@angular/core";
+import { VoltButton } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import type { BrandToken, ColorScale } from "@shared/types";
 import {
   bestForeground,
@@ -9,6 +11,7 @@ import {
 
 @Component({
   selector: "app-color-scale",
+  imports: [VoltButton, ...MOVEMENT_DIRECTIVES],
   template: `
     <div class="w-full space-y-3">
       <div class="flex items-center justify-between gap-3">
@@ -19,11 +22,11 @@ import {
           }}</span>
         </div>
 
-        <button
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-md border border-foreground/20 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-foreground/10"
-          [class.bg-foreground\\/10]="locked()"
+        <volt-button
+          size="sm"
+          [variant]="locked() ? 'solid' : 'outline'"
           [attr.aria-pressed]="locked()"
+          [moveWhileTap]="{ scale: [1, 0.94] }"
           [title]="
             locked()
               ? name() + ' is locked and will survive the next generate'
@@ -64,18 +67,23 @@ import {
             </svg>
             Lock
           }
-        </button>
+        </volt-button>
       </div>
 
       <!-- Compact squares on phones: eleven 3:4 cards two-per-row turned one
            scale into six screens of scrolling. Detail appears as space allows. -->
       <div
         class="grid grid-cols-4 min-[420px]:grid-cols-6 sm:grid-cols-6 lg:grid-cols-11 gap-1.5 sm:gap-2 lg:gap-3"
+        [moveStagger]="35"
       >
         @for (item of scaleItems(); track item.key) {
           <button
             type="button"
-            class="group relative flex aspect-square flex-col justify-between overflow-hidden rounded-lg p-1.5 text-left transition-all hover:z-10 hover:scale-105 hover:shadow-lg border border-black/5 dark:border-white/5 sm:rounded-xl sm:p-2 lg:aspect-[3/4] lg:p-3"
+            moveInView="zoom-in"
+            [moveWhileHover]="{ scale: [1, 1.08], y: [0, -4] }"
+            [moveWhileTap]="{ scale: [1, 0.96] }"
+            [moveDuration]="200"
+            class="group relative flex aspect-square flex-col justify-between overflow-hidden rounded-lg p-1.5 text-left hover:z-10 hover:shadow-lg border border-black/5 dark:border-white/5 sm:rounded-xl sm:p-2 lg:aspect-[3/4] lg:p-3"
             [style.background-color]="item.value"
             [style.color]="item.foreground"
             [attr.aria-label]="

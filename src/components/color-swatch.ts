@@ -1,13 +1,18 @@
 import { Component, input } from "@angular/core";
 import { VoltCard, VoltCardContent } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import type { ColorSwatchType } from "@shared/types";
 
 @Component({
   selector: "app-color-swatch",
-  imports: [VoltCard, VoltCardContent],
+  imports: [VoltCard, VoltCardContent, ...MOVEMENT_DIRECTIVES],
   template: `
     <volt-card
-      class="group cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-95"
+      class="group block cursor-pointer hover:shadow-md"
+      moveInView="fade-up"
+      [moveWhileHover]="{ scale: [1, 0.98] }"
+      [moveWhileTap]="{ scale: [1, 0.95] }"
+      [moveDuration]="180"
       (click)="copyToClipboard()"
     >
       <!-- oklab and hsl are the longest strings here and the first to overflow

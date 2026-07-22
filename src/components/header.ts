@@ -1,4 +1,6 @@
 import { Component, input, output } from "@angular/core";
+import { VoltButton } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ThemeSwitcher from "./theme-switcher";
 
 @Component({
@@ -18,22 +20,29 @@ import ThemeSwitcher from "./theme-switcher";
             </p>
           </div>
 
-          <button
-            class="shrink-0 p-2 rounded-lg border transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            style="border-color: rgb(var(--fg) / 0.3); color: rgb(var(--fg) / 1)"
-            (click)="toggleThemeMode.emit($event)"
+          <volt-button
+            variant="outline"
+            size="icon"
+            class="shrink-0"
             [disabled]="isLoading()"
+            [moveWhileHover]="{ rotate: [0, 12] }"
+            [moveWhileTap]="{ scale: [1, 0.9] }"
+            [moveDuration]="200"
+            [attr.aria-label]="
+              isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'
+            "
             [title]="
               isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'
             "
+            (click)="toggleThemeMode.emit($event)"
           >
             <theme-switcher [isDarkMode]="isDarkMode()" />
-          </button>
+          </volt-button>
         </div>
       </div>
     </header>
   `,
-  imports: [ThemeSwitcher],
+  imports: [ThemeSwitcher, VoltButton, ...MOVEMENT_DIRECTIVES],
 })
 export default class Header {
   isDarkMode = input();

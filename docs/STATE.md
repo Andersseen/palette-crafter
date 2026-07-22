@@ -20,11 +20,14 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **Playground** (`src/components/*`, `src/app/pages/(home).page.ts`): brand-color input, per-token lock so you can keep the primary and reroll the rest, live accessibility report, export panel with format switcher, copy and download, shareable permalink.
 - **Client state** (`src/services/color-palette.ts`, signals, `providedIn: root`): generates **in-process** from the shared generator — parity comes from the shared function, not from HTTP. Only calls the API when `THEME_API_BASE_URL` points at a remote instance, and then via GET.
 - **SSR + hydration**: zoneless, `provideClientHydration(withEventReplay())`, `/` prerendered. CSS variables are written on the server too, so **the prerendered document already carries the palette** (193 custom properties on `<html>`) — no flash of default colors.
-- **Tests**: 100 across 7 files. `pnpm test`.
+- **UI libraries**: `@voltui/components@0.6.0` for every base component and `angular-movement@0.5.0` for every animation, both by the same author and consumed here on purpose as a real integration test — see [LIB-FINDINGS.md](./LIB-FINDINGS.md).
+- **Theme reveal** (`src/services/theme-reveal.ts`): the circular wipe on generate/mode-switch. Paints the overlay with the *incoming* color, expands a clip-path circle from the click point to the furthest viewport corner, commits the palette while covered, then uncovers. Driven by `MoveTrigger.play()` promises, not `setTimeout`.
+- **Tests**: 110 across 8 files. `pnpm test`.
 - **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`.
 
 ## What's missing / broken (don't assume it works)
 
+- **`pnpm dev` has no server render.** `@voltui/components` pulls in `ng-primitives`, which binds DOM listeners on `nativeElement` during construction; Angular's server DOM has no `addEventListener`, so the dev SSR render aborts and the body comes back empty. The app still works (it bootstraps client-side) and **the production build is unaffected** — `pnpm build` prerenders everything correctly. Details and the suggested upstream fix are in [LIB-FINDINGS.md](./LIB-FINDINGS.md). Do not "fix" it by patching `ng-primitives` here; that was tried and only surfaces a second error (`NG0203`).
 - **No linter or formatter configured.** No `eslint.config.*` or `.prettierrc`. The existing code style is the only contract — imitate it.
 - **Only the service is covered by Angular tests.** `src/test-setup.ts` initialises the TestBed, so component tests are possible, but none exist.
 - **The `Border` contrast check reports Fail** for the deliberately subtle 0.2-alpha divider. This is reported honestly rather than hidden; if you want WCAG 1.4.11 compliance for non-text UI, the border token needs to be stronger.

@@ -212,13 +212,18 @@ export default class ColorPalette {
   }
 
   /**
-   * Generates a palette.
+   * Produces a palette without applying it.
+   *
+   * Split out from `generatePalette` so the reveal animation can know the
+   * incoming colors *before* they land on screen: the transition paints itself
+   * with the new background, expands to cover, and only then commits. Applying
+   * first and animating afterwards is what made the old overlay decorative.
    *
    * Runs in-process against the shared generator, which is what keeps the
    * playground and the API in lockstep (docs/CONTEXT.md). It only goes over
    * HTTP when the build points at a remote API via `THEME_API_BASE_URL`.
    */
-  async generatePalette(params: ThemeApiRequest = {}): Promise<boolean> {
+  async prepare(params: ThemeApiRequest = {}): Promise<CachedTheme | null> {
     this.loadingState.set(true);
     this.errorState.set(null);
 
@@ -233,44 +238,59 @@ export default class ColorPalette {
         ? await this.themeApi.getTheme({ ...request, algorithm: "v2" })
         : generateTheme({ ...request, algorithm: "v2" });
 
-      this.applyResult(result, { preserveLocked: true });
-      this.persistTheme({ theme: this.currentTheme(), meta: this.meta()! });
-      this.updateCSSVariables();
-      this.syncPermalinkToUrl();
-
-      return true;
+      return { theme: this.withLockedTokens(result.theme), meta: result.meta };
     } catch (error) {
       this.errorState.set(this.toFriendlyError(error));
-      return false;
+      return null;
     } finally {
       this.loadingState.set(false);
     }
   }
 
+  /** Applies a prepared palette: signals, CSS variables, storage and URL. */
+  commit(result: CachedTheme): void {
+    this.applyResult(result);
+    this.persistTheme(result);
+    this.updateCSSVariables();
+    this.syncPermalinkToUrl();
+  }
+
   /**
-   * Applies a generated result, optionally keeping locked brand scales.
+   * Generates and applies in one step, for callers with nothing to animate.
+   */
+  async generatePalette(params: ThemeApiRequest = {}): Promise<boolean> {
+    const result = await this.prepare(params);
+
+    if (!result) {
+      return false;
+    }
+
+    this.commit(result);
+    return true;
+  }
+
+  /**
+   * Carries locked brand scales over from the current theme.
    *
    * Locking is what makes the tool iterative rather than all-or-nothing: keep
    * the primary you like and reroll everything around it.
    */
-  private applyResult(
-    result: CachedTheme,
-    { preserveLocked = false }: { preserveLocked?: boolean } = {},
-  ): void {
+  private withLockedTokens(theme: Theme): Theme {
     const previous = this.currentTheme();
     const locks = this.lockedTokens();
+    const merged: Theme = { ...theme };
 
-    const theme: Theme = { ...result.theme };
-
-    if (preserveLocked) {
-      for (const token of ["primary", "secondary"] as BrandToken[]) {
-        if (locks[token]) {
-          theme[token] = previous[token];
-        }
+    for (const token of ["primary", "secondary"] as BrandToken[]) {
+      if (locks[token]) {
+        merged[token] = previous[token];
       }
     }
 
-    this.currentTheme.set(theme);
+    return merged;
+  }
+
+  private applyResult(result: CachedTheme): void {
+    this.currentTheme.set(result.theme);
     this.currentMeta.set(result.meta);
     this.themeMode.set(result.meta.mode);
     this.brandColor.set(result.meta.baseColor ?? null);
@@ -286,7 +306,8 @@ export default class ColorPalette {
     return this.generatePalette({ seed: this.mintSeed() });
   }
 
-  private mintSeed(): string {
+  /** A fresh random seed, so every generated palette stays reproducible. */
+  mintSeed(): string {
     const random = this.isBrowser
       ? Array.from(crypto.getRandomValues(new Uint8Array(6)))
           .map((byte) => byte.toString(36).padStart(2, "0"))
