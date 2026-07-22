@@ -3,11 +3,10 @@ import { Component } from "@angular/core";
 @Component({
   selector: "app-footer",
   template: `
-    <footer class="border-t mt-16 border-foreground/10">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <p class="text-center text-sm opacity-60">
-          Built with Angular • Styled with Tailwind CSS • Colors generated with
-          HSL harmony
+    <footer class="mt-10 border-t border-foreground/10">
+      <div class="mx-auto max-w-[1600px] px-3 py-5 sm:px-5">
+        <p class="text-center text-xs opacity-50">
+          Angular · Tailwind CSS · perceptual OKLCH scales, WCAG-checked
         </p>
       </div>
     </footer>

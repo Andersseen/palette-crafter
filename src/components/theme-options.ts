@@ -2,14 +2,17 @@ import { isPlatformBrowser } from "@angular/common";
 import { Component, PLATFORM_ID, computed, inject } from "@angular/core";
 import {
   VoltButton,
-  VoltCheckbox,
   VoltDialog,
   VoltDialogContent,
   VoltDialogDescription,
   VoltDialogOverlay,
   VoltDialogTitle,
   VoltSeparator,
+  VoltSwitch,
+  VoltToggleGroup,
+  VoltToggleGroupItem,
 } from "@voltui/components";
+import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import type { ColorTokenMode, StatusColorName } from "@shared/types";
 
@@ -17,25 +20,44 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
   selector: "app-theme-options",
   imports: [
     VoltButton,
-    VoltCheckbox,
     VoltDialog,
     VoltDialogContent,
     VoltDialogDescription,
     VoltDialogOverlay,
     VoltDialogTitle,
     VoltSeparator,
+    VoltSwitch,
+    VoltToggleGroup,
+    VoltToggleGroupItem,
+    ...MOVEMENT_DIRECTIVES,
   ],
   template: `
+    <!-- Lives in the command bar now. The old fixed bottom-right button
+         covered the last section on small screens. -->
     @if (isBrowser) {
-      <div class="fixed bottom-4 right-4 z-40 sm:bottom-6 sm:right-6">
-        <volt-button
-          size="md"
-          variant="outline"
-          [voltDialog]="themeOptionsDialog"
+      <volt-button size="sm" variant="outline" [voltDialog]="themeOptionsDialog">
+        <svg
+          class="h-3.5 w-3.5 sm:mr-1.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
         >
-          Theme Options
-        </volt-button>
-      </div>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+        <span class="hidden sm:inline">Options</span>
+      </volt-button>
 
       <ng-template #themeOptionsDialog>
         <div voltDialogOverlay></div>
@@ -70,22 +92,20 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
                     {{ token }}
                   </span>
 
-                  <div class="flex gap-2">
-                    <volt-button
-                      size="sm"
-                      [variant]="colorModes()[token] === 'single' ? 'solid' : 'outline'"
-                      (click)="setColorMode(token, 'single')"
-                    >
+                  <!-- A toggle group carries the "pick exactly one" semantics
+                       that two independent buttons only imitated. -->
+                  <volt-toggle-group
+                    type="single"
+                    [value]="[colorModes()[token]]"
+                    (valueChange)="onColorMode(token, $event)"
+                  >
+                    <volt-toggle-group-item value="single" size="sm">
                       Single
-                    </volt-button>
-                    <volt-button
-                      size="sm"
-                      [variant]="colorModes()[token] === 'scale' ? 'solid' : 'outline'"
-                      (click)="setColorMode(token, 'scale')"
-                    >
+                    </volt-toggle-group-item>
+                    <volt-toggle-group-item value="scale" size="sm">
                       Scale
-                    </volt-button>
-                  </div>
+                    </volt-toggle-group-item>
+                  </volt-toggle-group>
                 </div>
               }
             </section>
@@ -97,16 +117,16 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
                 Status Colors
               </h3>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid gap-3 sm:grid-cols-2">
                 @for (status of statusTokens; track status) {
                   <label
-                    class="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-3 text-sm text-foreground hover:bg-accent"
+                    class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-3 text-sm text-foreground hover:bg-accent"
                   >
-                    <volt-checkbox
+                    <span class="capitalize">{{ status }}</span>
+                    <volt-switch
                       [checked]="enabledStatusColors()[status]"
                       (checkedChange)="setStatusColor(status, $event)"
                     />
-                    <span class="capitalize">{{ status }}</span>
                   </label>
                 }
               </div>
@@ -128,8 +148,17 @@ export default class ThemeOptions {
   colorModes = computed(() => this.colorService.selectedColorModes());
   enabledStatusColors = computed(() => this.colorService.enabledStatusColors());
 
-  setColorMode(token: "primary" | "secondary", mode: ColorTokenMode): void {
-    this.colorService.setColorTokenMode(token, mode);
+  /**
+   * `volt-toggle-group` always emits an array, even in `single` mode, and emits
+   * an empty one when the active item is deselected — which we ignore so a
+   * token always has a mode.
+   */
+  onColorMode(token: "primary" | "secondary", value: string[]): void {
+    const mode = value[0] as ColorTokenMode | undefined;
+
+    if (mode) {
+      this.colorService.setColorTokenMode(token, mode);
+    }
   }
 
   setStatusColor(status: StatusColorName, enabled: boolean): void {

@@ -11,6 +11,16 @@
   --secondary-foreground: 255 255 255;
   --secondary-contrast: 255 255 255;
 
+  /* Status defaults. Overwritten at runtime by ColorPalette.updateCSSVariables. */
+  --info: 37 99 235;
+  --info-foreground: 255 255 255;
+  --success: 22 163 74;
+  --success-foreground: 255 255 255;
+  --warning: 245 158 11;
+  --warning-foreground: 0 0 0;
+  --danger: 220 38 38;
+  --danger-foreground: 255 255 255;
+
   --background: rgb(var(--bg));
   --foreground: rgb(var(--fg));
   --surface: rgb(var(--bg));
@@ -103,6 +113,15 @@
   --color-secondary-900-contrast: rgb(var(--secondary-900-contrast));
   --color-secondary-950: rgb(var(--secondary-950));
   --color-secondary-950-contrast: rgb(var(--secondary-950-contrast));
+
+  --color-info: rgb(var(--info));
+  --color-info-foreground: rgb(var(--info-foreground));
+  --color-success: rgb(var(--success));
+  --color-success-foreground: rgb(var(--success-foreground));
+  --color-warning: rgb(var(--warning));
+  --color-warning-foreground: rgb(var(--warning-foreground));
+  --color-danger: rgb(var(--danger));
+  --color-danger-foreground: rgb(var(--danger-foreground));
 }
 
 /* @layer base {
@@ -113,37 +132,77 @@
     --color-secondary: #34d399;
   }
 } */
+/*
+ * Theme reveal overlay.
+ *
+ * Fixed and above the page, not `z-index: -1` behind it: the circular wipe is
+ * meant to be seen. Geometry and playback are driven from TypeScript through
+ * angular-movement (clip-path animated via WAAPI), so there are no @keyframes
+ * here — the radius depends on where you clicked and cannot be expressed in
+ * static CSS.
+ */
 #theme-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  clip-path: circle(0px at 50vw 50vh);
+}
+
+#theme-overlay[data-revealing="true"] {
+  opacity: 1;
+}
+
+/*
+ * Scoped variant used when generating: covers only the workspace, so the
+ * command bar stays visible and the wipe reads as "the palette changed"
+ * rather than "the page went away".
+ */
+.palette-overlay {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 30;
   pointer-events: none;
-  clip-path: circle(0 at var(--x) var(--y));
+  opacity: 0;
+  border-radius: 0.75rem;
+  clip-path: circle(0px at 50% 50%);
 }
 
-@keyframes reveal {
-  from {
-    clip-path: circle(0 at var(--x) var(--y));
-  }
-  to {
-    clip-path: circle(100% at var(--x) var(--y));
-  }
-}
-@keyframes reveal-back {
-  0% {
-    clip-path: circle(0 at var(--x) var(--y));
-  }
-  50% {
-    clip-path: circle(150% at var(--x) var(--y));
-  }
-  100% {
-    clip-path: circle(0 at var(--x) var(--y));
-  }
+.palette-overlay[data-revealing="true"] {
+  opacity: 1;
 }
 
-.theme-animating #theme-overlay {
-  animation: reveal 150ms ease-in forwards;
+/*
+ * Theme switch via the View Transitions API.
+ *
+ * The default cross-fade is replaced by a hard stack: the old paint stays put
+ * while the new one is clipped in from the click point (the clip itself is
+ * animated in ThemeReveal). Without `animation: none` the browser also
+ * cross-fades, which muddies the wipe into a grey blur.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
-.theme-generate-animating #theme-overlay {
-  animation: reveal-back 300ms ease-in-out forwards;
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* The reveal replaces scroll-anchoring jitter during the snapshot. */
+html[data-theme-transition="true"] {
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
 }

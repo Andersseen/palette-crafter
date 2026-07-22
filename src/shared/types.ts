@@ -34,6 +34,12 @@ export interface OklabColor {
   b: number;
 }
 
+export interface OklchColor {
+  l: number;
+  c: number;
+  h: number;
+}
+
 export interface ColorSwatchType {
   name: string;
   hex: string;
@@ -57,11 +63,28 @@ export type HarmonyType =
   | "split-complementary"
   | "triadic";
 
+/**
+ * Generation algorithm.
+ *
+ * - `v1` — frozen. HSL scales with a fixed lightness ramp. Every seed in the
+ *   wild depends on its exact output (see docs/CONVENTIONS.md #2).
+ * - `v2` — OKLCH perceptual scales, input lightness preserved, `baseColor`
+ *   support, AAA-targeted body text.
+ */
+export type ThemeAlgorithm = "v1" | "v2";
+
+/** Which brand tokens to keep untouched when regenerating. */
+export type BrandToken = "primary" | "secondary";
+export type LockedTokens = Record<BrandToken, boolean>;
+
 export interface ThemeApiRequest {
   mode?: ThemeMode;
   seed?: number | string;
   baseHue?: number;
   harmony?: HarmonyType;
+  /** v2 only: exact brand color to build the primary scale from. */
+  baseColor?: string;
+  algorithm?: ThemeAlgorithm;
 }
 
 export interface ThemeApiMeta {
@@ -70,10 +93,55 @@ export interface ThemeApiMeta {
   secondaryHue: number;
   harmony: HarmonyType;
   seeded: boolean;
+  algorithm: ThemeAlgorithm;
+  /** Echoed back so a generated palette can be reproduced via permalink. */
+  seed?: string | number;
+  baseColor?: string;
 }
 
 export interface ThemeApiResponse {
   ok: true;
   theme: Theme;
   meta: ThemeApiMeta;
+}
+
+/** Machine-readable formats the palette can be exported to. */
+export type ExportFormat =
+  | "tailwind"
+  | "css"
+  | "scss"
+  | "json"
+  | "shadcn"
+  | "design-tokens";
+
+export interface ExportOptions {
+  colorModes?: ThemeColorModes;
+  enabledStatusColors?: EnabledStatusColors;
+}
+
+export type WcagLevel = "AAA" | "AA" | "AA Large" | "Fail";
+
+/** The shade to reach for when the checked pair does not clear the threshold. */
+export interface ContrastSuggestion {
+  shade: string;
+  hex: string;
+  ratio: number;
+}
+
+export interface ContrastCheck {
+  label: string;
+  foreground: string;
+  background: string;
+  ratio: number;
+  level: WcagLevel;
+  /** Whether this pair is expected to carry body-sized text. */
+  bodyText: boolean;
+  passes: boolean;
+  suggestion?: ContrastSuggestion;
+}
+
+export interface ContrastReport {
+  checks: ContrastCheck[];
+  failing: number;
+  passing: number;
 }

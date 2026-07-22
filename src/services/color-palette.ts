@@ -7,68 +7,63 @@ import {
   signal,
 } from "@angular/core";
 import type {
-  Theme,
-  HSLColor,
+  BrandToken,
+  ColorScale,
   ColorSwatchType,
-  ThemeMode,
+  ColorTokenMode,
+  EnabledStatusColors,
+  ExportFormat,
+  HarmonyType,
+  HSLColor,
+  LockedTokens,
   OklabColor,
+  StatusColorName,
+  Theme,
   ThemeApiMeta,
   ThemeApiRequest,
   ThemeApiResponse,
-  ColorScale,
-  ColorTokenMode,
-  EnabledStatusColors,
-  StatusColorName,
   ThemeColorModes,
+  ThemeMode,
 } from "@shared/types";
 import {
+  bestForeground,
   calculateContrast,
   hexToHsl,
   hexToOklab,
   hexToRgb,
-  generateColorScale,
+  normalizeHex,
 } from "@shared/utils";
+import { generateTheme } from "@shared/theme-generator";
+import { buildContrastReport } from "@shared/contrast";
+import { exportTheme, permalinkFor } from "@shared/export";
 import ThemeApiClient from "./theme-api-client";
 
 type CachedTheme = Pick<ThemeApiResponse, "theme" | "meta">;
+
 const COLOR_SCALE_SHADES = [
-  50,
-  100,
-  200,
-  300,
-  400,
-  500,
-  600,
-  700,
-  800,
-  900,
-  950,
+  50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950,
 ] as const;
+
+/** Seed behind the palette a first-time visitor lands on. */
+const HOME_SEED = "palette-crafter-home";
+
+const STORAGE_KEY = "palette-crafter:last-theme";
 
 @Injectable({ providedIn: "root" })
 export default class ColorPalette {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly themeApi = inject(ThemeApiClient);
-  private readonly storageKey = "palette-forge:last-theme";
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
-  private currentTheme = signal<Theme>({
-    bg: "#ffffff",
-    fg: "#1a1a1a",
-    primary: generateColorScale("#3b82f6"),
-    secondary: generateColorScale("#10b981"),
-    status: {
-      info: generateColorScale("#2563eb"),
-      success: generateColorScale("#16a34a"),
-      warning: generateColorScale("#f59e0b"),
-      danger: generateColorScale("#dc2626"),
-    },
-  });
-
-  private themeMode = signal<ThemeMode>("light");
+  private currentTheme = signal<Theme>(
+    generateTheme({ seed: HOME_SEED, mode: "light", algorithm: "v2" }).theme,
+  );
   private currentMeta = signal<ThemeApiMeta | null>(null);
+  private themeMode = signal<ThemeMode>("light");
   private loadingState = signal(false);
   private errorState = signal<string | null>(null);
+
   private colorModes = signal<ThemeColorModes>({
     primary: "scale",
     secondary: "scale",
@@ -79,6 +74,12 @@ export default class ColorPalette {
     warning: false,
     danger: false,
   });
+  private lockedTokens = signal<LockedTokens>({
+    primary: false,
+    secondary: false,
+  });
+  private brandColor = signal<string | null>(null);
+  private exportFormatState = signal<ExportFormat>("tailwind");
 
   // Public computed signals
   theme = computed(() => this.currentTheme());
@@ -88,94 +89,298 @@ export default class ColorPalette {
   error = computed(() => this.errorState());
   selectedColorModes = computed(() => this.colorModes());
   enabledStatusColors = computed(() => this.statusColors());
+  locked = computed(() => this.lockedTokens());
+  activeBrandColor = computed(() => this.brandColor());
+  exportFormat = computed(() => this.exportFormatState());
+
+  /** Live WCAG audit of the pairs the theme actually renders. */
+  contrastReport = computed(() =>
+    buildContrastReport(this.currentTheme(), this.statusColors()),
+  );
+
+  permalink = computed(() => {
+    const meta = this.currentMeta();
+    if (!meta) {
+      return null;
+    }
+
+    const origin = this.isBrowser ? window.location.origin : "";
+    return permalinkFor(meta, origin);
+  });
+
+  exportedTheme = computed(() => {
+    const meta = this.currentMeta();
+    if (!meta) {
+      return "";
+    }
+
+    return exportTheme(this.exportFormatState(), {
+      theme: this.currentTheme(),
+      meta,
+      options: {
+        colorModes: this.colorModes(),
+        enabledStatusColors: this.statusColors(),
+      },
+    });
+  });
 
   constructor() {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
+    // Seeding synchronously — on the server as well as the browser — is what
+    // removes the flash of default colors: the first paint already carries the
+    // real palette instead of waiting for a round-trip after hydration.
+    this.applyResult(
+      generateTheme({
+        ...this.initialRequest(),
+        algorithm: "v2",
+      }),
+    );
+
+    // Also on the server: platform-server serializes the inline style it writes
+    // on <html>, so the prerendered document ships the palette already applied.
+    this.updateCSSVariables();
+
+    if (this.isBrowser) {
+      this.watchSystemPreference();
     }
-
-    const hasCachedTheme = this.restoreCachedTheme();
-
-    // Auto-detect system preference
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-
-    if (!hasCachedTheme) {
-      this.setThemeMode(prefersDark ? "dark" : "light");
-    }
-
-    // Listen for system preference changes
-    window
-      .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", (e) => {
-        this.setThemeMode(e.matches ? "dark" : "light");
-        void this.generatePalette({ mode: this.themeMode() });
-      });
   }
 
   /**
-   * Requests a theme from the API and keeps the last valid theme as fallback.
+   * Decides which palette to open with: an explicit permalink wins, then the
+   * palette cached from the last visit, then the default home seed.
    */
-  async generatePalette(params: ThemeApiRequest = {}): Promise<boolean> {
-    if (!isPlatformBrowser(this.platformId)) {
-      return false;
+  private initialRequest(): ThemeApiRequest {
+    if (!this.isBrowser) {
+      return { seed: HOME_SEED, mode: "light" };
     }
 
+    const fromUrl = this.readPermalink();
+    if (fromUrl) {
+      return fromUrl;
+    }
+
+    const cached = this.readCachedTheme();
+    if (cached) {
+      return {
+        seed: cached.meta.seed,
+        baseColor: cached.meta.baseColor,
+        baseHue: cached.meta.baseColor ? undefined : cached.meta.baseHue,
+        harmony: cached.meta.harmony,
+        mode: cached.meta.mode,
+      };
+    }
+
+    return {
+      seed: HOME_SEED,
+      mode: window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light",
+    };
+  }
+
+  private readPermalink(): ThemeApiRequest | null {
+    const params = new URLSearchParams(window.location.search);
+
+    if (![...params.keys()].some((key) => key !== "")) {
+      return null;
+    }
+
+    const mode = params.get("mode");
+    const harmony = params.get("harmony");
+    const baseHue = params.get("baseHue");
+    const baseColor = params.get("baseColor");
+    const seed = params.get("seed");
+
+    const request: ThemeApiRequest = {};
+
+    if (mode === "light" || mode === "dark") {
+      request.mode = mode;
+    }
+    if (harmony) {
+      request.harmony = harmony as HarmonyType;
+    }
+    if (baseColor && normalizeHex(baseColor)) {
+      request.baseColor = normalizeHex(baseColor)!;
+    }
+    if (baseHue !== null && Number.isFinite(Number(baseHue))) {
+      request.baseHue = Number(baseHue);
+    }
+    if (seed !== null) {
+      request.seed = seed;
+    }
+
+    return Object.keys(request).length > 0 ? request : null;
+  }
+
+  /**
+   * Produces a palette without applying it.
+   *
+   * Split out from `generatePalette` so the reveal animation can know the
+   * incoming colors *before* they land on screen: the transition paints itself
+   * with the new background, expands to cover, and only then commits. Applying
+   * first and animating afterwards is what made the old overlay decorative.
+   *
+   * Runs in-process against the shared generator, which is what keeps the
+   * playground and the API in lockstep (docs/CONTEXT.md). It only goes over
+   * HTTP when the build points at a remote API via `THEME_API_BASE_URL`.
+   */
+  async prepare(params: ThemeApiRequest = {}): Promise<CachedTheme | null> {
     this.loadingState.set(true);
     this.errorState.set(null);
 
+    const request: ThemeApiRequest = {
+      mode: this.themeMode(),
+      ...(this.brandColor() ? { baseColor: this.brandColor()! } : {}),
+      ...params,
+    };
+
     try {
-      const response = await this.themeApi.createTheme({
-        mode: this.themeMode(),
-        ...params,
-      });
+      const result = this.themeApi.isRemoteConfigured
+        ? await this.themeApi.getTheme({ ...request, algorithm: "v2" })
+        : generateTheme({ ...request, algorithm: "v2" });
 
-      this.currentTheme.set(response.theme);
-      this.currentMeta.set(response.meta);
-      this.setThemeMode(response.meta.mode);
-      this.persistTheme(response);
-      this.updateCSSVariables();
-
-      return true;
+      return { theme: this.withLockedTokens(result.theme), meta: result.meta };
     } catch (error) {
       this.errorState.set(this.toFriendlyError(error));
-      return false;
+      return null;
     } finally {
       this.loadingState.set(false);
     }
   }
 
-  /**
-   * Toggles between light and dark theme modes
-   */
-  async toggleThemeMode(): Promise<boolean> {
-    const newMode = this.themeMode() === "light" ? "dark" : "light";
-    this.setThemeMode(newMode);
-    return this.generatePalette({ mode: newMode });
+  /** Applies a prepared palette: signals, CSS variables, storage and URL. */
+  commit(result: CachedTheme): void {
+    this.applyResult(result);
+    this.persistTheme(result);
+    this.updateCSSVariables();
+    this.syncPermalinkToUrl();
   }
 
   /**
-   * Sets the theme mode and regenerates the palette
+   * Generates and applies in one step, for callers with nothing to animate.
    */
-  setThemeMode(mode: ThemeMode): void {
-    this.themeMode.set(mode);
+  async generatePalette(params: ThemeApiRequest = {}): Promise<boolean> {
+    const result = await this.prepare(params);
 
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
+    if (!result) {
+      return false;
     }
 
+    this.commit(result);
+    return true;
+  }
+
+  /**
+   * Carries locked brand scales over from the current theme.
+   *
+   * Locking is what makes the tool iterative rather than all-or-nothing: keep
+   * the primary you like and reroll everything around it.
+   */
+  private withLockedTokens(theme: Theme): Theme {
+    const previous = this.currentTheme();
+    const locks = this.lockedTokens();
+    const merged: Theme = { ...theme };
+
+    for (const token of ["primary", "secondary"] as BrandToken[]) {
+      if (locks[token]) {
+        merged[token] = previous[token];
+      }
+    }
+
+    return merged;
+  }
+
+  private applyResult(result: CachedTheme): void {
+    this.currentTheme.set(result.theme);
+    this.currentMeta.set(result.meta);
+    this.themeMode.set(result.meta.mode);
+    this.brandColor.set(result.meta.baseColor ?? null);
+    this.applyModeClass(result.meta.mode);
+  }
+
+  /**
+   * Regenerates using the current settings, keeping locked tokens.
+   * Without a seed the result is random, so a fresh one is minted and recorded
+   * in the URL — otherwise a palette you like is unrecoverable on reload.
+   */
+  async reroll(): Promise<boolean> {
+    return this.generatePalette({ seed: this.mintSeed() });
+  }
+
+  /** A fresh random seed, so every generated palette stays reproducible. */
+  mintSeed(): string {
+    const random = this.isBrowser
+      ? Array.from(crypto.getRandomValues(new Uint8Array(6)))
+          .map((byte) => byte.toString(36).padStart(2, "0"))
+          .join("")
+      : Math.random().toString(36).slice(2, 10);
+
+    return random.slice(0, 10);
+  }
+
+  async toggleThemeMode(): Promise<boolean> {
+    const newMode = this.themeMode() === "light" ? "dark" : "light";
+    const meta = this.currentMeta();
+
+    // Keep the same palette identity and only swap the mode.
+    return this.generatePalette({
+      mode: newMode,
+      seed: meta?.seed,
+      harmony: meta?.harmony,
+      ...(meta?.baseColor
+        ? { baseColor: meta.baseColor }
+        : { baseHue: meta?.baseHue }),
+    });
+  }
+
+  setThemeMode(mode: ThemeMode): void {
+    this.themeMode.set(mode);
+    this.applyModeClass(mode);
+  }
+
+  private applyModeClass(mode: ThemeMode): void {
     this.document.documentElement.classList.toggle("dark", mode === "dark");
   }
 
   /**
-   * Updates CSS custom properties with current theme
+   * Adopts a brand color: the primary scale is rebuilt so this exact hex
+   * appears in the palette. Passing `null` returns to generated hues.
    */
-  updateCSSVariables(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
+  async setBrandColor(hex: string | null): Promise<boolean> {
+    if (hex === null) {
+      this.brandColor.set(null);
+      return this.generatePalette({ seed: this.mintSeed() });
     }
 
+    const normalized = normalizeHex(hex);
+    if (!normalized) {
+      this.errorState.set(`"${hex}" is not a valid hex color.`);
+      return false;
+    }
+
+    this.brandColor.set(normalized);
+    return this.generatePalette({ baseColor: normalized });
+  }
+
+  setLocked(token: BrandToken, isLocked: boolean): void {
+    this.lockedTokens.update((current) => ({ ...current, [token]: isLocked }));
+  }
+
+  toggleLocked(token: BrandToken): void {
+    this.setLocked(token, !this.lockedTokens()[token]);
+  }
+
+  setExportFormat(format: ExportFormat): void {
+    this.exportFormatState.set(format);
+  }
+
+  /**
+   * Writes the theme to CSS custom properties.
+   *
+   * Token variables carry a bare RGB triplet and are consumed as
+   * `rgb(var(--token))`; the shadcn-style semantic variables carry a full
+   * color value and are read by `@voltui/components`. See CONVENTIONS.md #3.
+   */
+  updateCSSVariables(): void {
     const theme = this.currentTheme();
     const root = this.document.documentElement;
 
@@ -184,15 +389,9 @@ export default class ColorPalette {
     root.style.setProperty("--background", `rgb(${hexToRgb(theme.bg)})`);
     root.style.setProperty("--foreground", `rgb(${hexToRgb(theme.fg)})`);
     root.style.setProperty("--surface", `rgb(${hexToRgb(theme.bg)})`);
-    root.style.setProperty(
-      "--surface-foreground",
-      `rgb(${hexToRgb(theme.fg)})`,
-    );
+    root.style.setProperty("--surface-foreground", `rgb(${hexToRgb(theme.fg)})`);
     root.style.setProperty("--popover", `rgb(${hexToRgb(theme.bg)})`);
-    root.style.setProperty(
-      "--popover-foreground",
-      `rgb(${hexToRgb(theme.fg)})`,
-    );
+    root.style.setProperty("--popover-foreground", `rgb(${hexToRgb(theme.fg)})`);
     root.style.setProperty("--muted", `rgb(${hexToRgb(theme.fg)} / 0.08)`);
     root.style.setProperty(
       "--muted-foreground",
@@ -203,29 +402,21 @@ export default class ColorPalette {
     root.style.setProperty("--border", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
     root.style.setProperty("--input", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
 
-    // Helper to set color and contrast
     const setScaleVars = (name: string, scale: ColorScale) => {
-      // Set DEFAULT and its contrast
       root.style.setProperty(`--${name}`, hexToRgb(scale.DEFAULT));
       if (name === "primary") {
         root.style.setProperty("--ring", `rgb(${hexToRgb(scale.DEFAULT)})`);
       }
-      const defaultContrast = scale.foreground;
-      root.style.setProperty(
-        `--${name}-foreground`,
-        hexToRgb(defaultContrast),
-      );
-      root.style.setProperty(`--${name}-contrast`, hexToRgb(defaultContrast));
+
+      root.style.setProperty(`--${name}-foreground`, hexToRgb(scale.foreground));
+      root.style.setProperty(`--${name}-contrast`, hexToRgb(scale.foreground));
 
       COLOR_SCALE_SHADES.forEach((key) => {
         const hex = scale[key];
         root.style.setProperty(`--${name}-${key}`, hexToRgb(hex));
-
-        const contrast =
-          calculateContrast(hex, "#ffffff") >= 4.5 ? "#ffffff" : "#000000";
         root.style.setProperty(
           `--${name}-${key}-contrast`,
-          hexToRgb(contrast),
+          hexToRgb(bestForeground(hex)),
         );
       });
     };
@@ -241,75 +432,40 @@ export default class ColorPalette {
   }
 
   /**
-   * Updates the active shade (DEFAULT) for a specific color scale
+   * Promotes a shade to be the scale's DEFAULT.
+   *
+   * The foreground is recomputed for the new DEFAULT. Leaving it untouched used
+   * to leave, say, white text pinned over shade 50 at 1.15:1.
    */
-  updateActiveShade(type: "primary" | "secondary", shadeValue: string): void {
+  updateActiveShade(type: BrandToken, shadeValue: string): void {
     const currentTheme = this.currentTheme();
-    const targetScale =
-      type === "primary" ? currentTheme.primary : currentTheme.secondary;
+    const targetScale = currentTheme[type];
 
-    // Create new scale object with updated DEFAULT
-    const newScale = { ...targetScale, DEFAULT: shadeValue };
+    const newScale: ColorScale = {
+      ...targetScale,
+      DEFAULT: shadeValue,
+      foreground: bestForeground(shadeValue),
+    };
 
-    this.currentTheme.set({
-      ...currentTheme,
-      [type]: newScale,
-    });
-
+    this.currentTheme.set({ ...currentTheme, [type]: newScale });
     this.updateCSSVariables();
   }
 
-  setColorTokenMode(
-    token: "primary" | "secondary",
-    mode: ColorTokenMode,
-  ): void {
-    this.colorModes.update((current) => ({
-      ...current,
-      [token]: mode,
-    }));
+  setColorTokenMode(token: BrandToken, mode: ColorTokenMode): void {
+    this.colorModes.update((current) => ({ ...current, [token]: mode }));
   }
 
   setStatusColorEnabled(name: StatusColorName, enabled: boolean): void {
-    this.statusColors.update((current) => ({
-      ...current,
-      [name]: enabled,
-    }));
+    this.statusColors.update((current) => ({ ...current, [name]: enabled }));
   }
 
-  /**
-   * Gets color swatches for display
-   */
   getColorSwatches(): ColorSwatchType[] {
     const theme = this.currentTheme();
     return [
-      {
-        name: "Background",
-        hex: theme.bg,
-        hsl: this.formatHSL(hexToHsl(theme.bg)),
-        oklab: this.formatOklab(hexToOklab(theme.bg)),
-        cssVar: "--bg",
-      },
-      {
-        name: "Foreground",
-        hex: theme.fg,
-        hsl: this.formatHSL(hexToHsl(theme.fg)),
-        oklab: this.formatOklab(hexToOklab(theme.fg)),
-        cssVar: "--fg",
-      },
-      {
-        name: "Primary",
-        hex: theme.primary.DEFAULT,
-        hsl: this.formatHSL(hexToHsl(theme.primary.DEFAULT)),
-        oklab: this.formatOklab(hexToOklab(theme.primary.DEFAULT)),
-        cssVar: "--primary",
-      },
-      {
-        name: "Secondary",
-        hex: theme.secondary.DEFAULT,
-        hsl: this.formatHSL(hexToHsl(theme.secondary.DEFAULT)),
-        oklab: this.formatOklab(hexToOklab(theme.secondary.DEFAULT)),
-        cssVar: "--secondary",
-      },
+      this.toColorSwatch("Background", theme.bg, "--bg"),
+      this.toColorSwatch("Foreground", theme.fg, "--fg"),
+      this.toColorSwatch("Primary", theme.primary.DEFAULT, "--primary"),
+      this.toColorSwatch("Secondary", theme.secondary.DEFAULT, "--secondary"),
     ];
   }
 
@@ -322,8 +478,7 @@ export default class ColorPalette {
   }
 
   getStatusColorSwatches(): ColorSwatchType[] {
-    const theme = this.currentTheme();
-    const status = theme.status;
+    const status = this.currentTheme().status;
 
     if (!status) {
       return [];
@@ -340,16 +495,17 @@ export default class ColorPalette {
       );
   }
 
-  /**
-   * Formats HSL values for display
-   */
+  /** Contrast of a shade against the current background, for the scale UI. */
+  contrastAgainstBackground(hex: string): number {
+    return (
+      Math.round(calculateContrast(hex, this.currentTheme().bg) * 100) / 100
+    );
+  }
+
   private formatHSL(hsl: HSLColor): string {
     return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
   }
 
-  /**
-   * Formats Oklab values for display
-   */
   private formatOklab(oklab: OklabColor): string {
     return `oklab(${oklab.l.toFixed(3)} ${oklab.a.toFixed(3)} ${oklab.b.toFixed(
       3,
@@ -383,96 +539,72 @@ export default class ColorPalette {
     }
   }
 
-  private restoreCachedTheme(): boolean {
+  /**
+   * Reflects the current palette in the address bar so it can be shared and
+   * survives a reload — the point of deterministic seeds.
+   */
+  private syncPermalinkToUrl(): void {
+    const link = this.permalink();
+
+    if (!this.isBrowser || !link) {
+      return;
+    }
+
+    window.history.replaceState({}, "", link);
+  }
+
+  private readCachedTheme(): CachedTheme | null {
     try {
-      const raw = window.localStorage.getItem(this.storageKey);
+      const raw = window.localStorage.getItem(STORAGE_KEY);
 
       if (!raw) {
-        return false;
+        return null;
       }
 
       const cached = JSON.parse(raw) as Partial<CachedTheme>;
 
       if (!cached.theme || !cached.meta) {
-        return false;
+        return null;
       }
 
-      this.currentTheme.set(cached.theme);
-      this.currentMeta.set(cached.meta);
-      this.setThemeMode(cached.meta.mode);
-      this.updateCSSVariables();
-      return true;
+      return cached as CachedTheme;
     } catch {
-      window.localStorage.removeItem(this.storageKey);
-      return false;
+      window.localStorage.removeItem(STORAGE_KEY);
+      return null;
     }
   }
 
   private persistTheme(response: CachedTheme): void {
-    if (!isPlatformBrowser(this.platformId)) {
+    if (!this.isBrowser) {
       return;
     }
 
-    window.localStorage.setItem(
-      this.storageKey,
-      JSON.stringify({
-        theme: response.theme,
-        meta: response.meta,
-      }),
-    );
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
+    } catch {
+      // Private browsing or a full quota — not worth surfacing to the user.
+    }
+  }
+
+  /**
+   * Follows the OS light/dark preference only while the user has not expressed
+   * one of their own. Regenerating unconditionally used to throw away the
+   * palette they were working on.
+   */
+  private watchSystemPreference(): void {
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+
+    query.addEventListener("change", (event) => {
+      if (this.readCachedTheme() || this.readPermalink()) {
+        return;
+      }
+
+      void this.generatePalette({ mode: event.matches ? "dark" : "light" });
+    });
   }
 
   private toFriendlyError(error: unknown): string {
     const reason = error instanceof Error ? error.message : "Unknown error.";
-    return `Could not load a fresh theme from the API. Keeping the last valid palette. ${reason}`;
-  }
-
-  /**
-   * Gets Tailwind config extension object
-   */
-  getTailwindConfig(): string {
-    const theme = this.currentTheme();
-    const colorModes = this.colorModes();
-    const enabledStatusColors = this.statusColors();
-    const statusEntries = theme.status
-      ? (Object.keys(enabledStatusColors) as StatusColorName[])
-          .filter((name) => enabledStatusColors[name])
-          .map((name) => {
-            return `  --color-${name}: rgb(var(--${name}));
-  --color-${name}-foreground: rgb(var(--${name}-foreground));`;
-          })
-          .join("\n\n")
-      : "";
-    const scaleEntries = (["primary", "secondary"] as const)
-      .map((name) => {
-        if (colorModes[name] === "single") {
-          return `  --color-${name}: rgb(var(--${name}));
-  --color-${name}-foreground: rgb(var(--${name}-foreground));`;
-        }
-
-        return `  --color-${name}: rgb(var(--${name}));
-  --color-${name}-foreground: rgb(var(--${name}-foreground));
-  --color-${name}-50: rgb(var(--${name}-50));
-  --color-${name}-100: rgb(var(--${name}-100));
-  --color-${name}-200: rgb(var(--${name}-200));
-  --color-${name}-300: rgb(var(--${name}-300));
-  --color-${name}-400: rgb(var(--${name}-400));
-  --color-${name}-500: rgb(var(--${name}-500));
-  --color-${name}-600: rgb(var(--${name}-600));
-  --color-${name}-700: rgb(var(--${name}-700));
-  --color-${name}-800: rgb(var(--${name}-800));
-  --color-${name}-900: rgb(var(--${name}-900));
-  --color-${name}-950: rgb(var(--${name}-950));`;
-      })
-      .join("\n\n");
-
-    return `
-@theme {
-  --color-background: rgb(var(--bg));
-  --color-foreground: rgb(var(--fg));
-
-${scaleEntries}${statusEntries ? `\n\n${statusEntries}` : ""}
-}
-`.trim();
+    return `Could not load a fresh theme. Keeping the last valid palette. ${reason}`;
   }
 }

@@ -21,4 +21,16 @@ declare module "h3" {
   export function readBody<T = unknown>(event: H3Event): Promise<T>;
 
   export function createError(input: H3ErrorOptions): Error;
+
+  export function setResponseHeader(
+    event: H3Event,
+    name: string,
+    value: string,
+  ): void;
+
+  export function setResponseStatus(
+    event: H3Event,
+    code: number,
+    text?: string,
+  ): void;
 }

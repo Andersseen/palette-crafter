@@ -1,5 +1,5 @@
 {
-  "name": "palette-forge",
+  "name": "palette-crafter",
   "private": false,
   "description": "A lightweight tool to generate dynamic color palettes (background, foreground, primary, secondary) for Angular and Tailwind CSS v4.",
   "author": {
@@ -23,17 +23,19 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Andersseen/palette-forge.git"
+    "url": "https://github.com/Andersseen/palette-crafter.git"
   },
   "bugs": {
-    "url": "https://github.com/Andersseen/palette-forge/issues"
+    "url": "https://github.com/Andersseen/palette-crafter/issues"
   },
-  "homepage": "https://palette-forge.pages.dev",
+  "homepage": "https://palette-crafter.pages.dev",
   "scripts": {
     "dev": "CHOKIDAR_USEPOLLING=true ng serve",
     "start": "pnpm dev",
     "clean": "rm -rf dist .angular/cache",
     "build": "ng build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build:cf": "BUILD_PRESET=cloudflare-pages ng build",
     "dev:cf": "pnpm build:cf && wrangler pages dev",
     "deploy:cf": "pnpm build:cf && wrangler pages deploy"
@@ -50,7 +52,8 @@
     "@angular/platform-server": "^21.2.3",
     "@angular/router": "^21.2.3",
     "@tailwindcss/postcss": "^4.1.11",
-    "@voltui/components": "^0.1.0",
+    "@voltui/components": "^0.6.0",
+    "angular-movement": "^0.5.0",
     "autoprefixer": "^10.4.21",
     "h3": "^1.15.4",
     "marked": "^15.0.7",
@@ -68,6 +71,7 @@
     "@analogjs/vite-plugin-angular": "^2.3.1",
     "@analogjs/vitest-angular": "^2.3.1",
     "@angular/build": "^21.2.3",
+    "@angular/cdk": "21.2.10",
     "@angular/cli": "^21.2.3",
     "@angular/compiler-cli": "^21.2.3",
     "@nx/devkit": "^22.6.1",
@@ -75,9 +79,11 @@
     "@types/node": "^22.15.30",
     "jsdom": "^22.0.0",
     "nx": "^22.6.1",
+    "playwright": "^1.61.1",
     "typescript": "^5.9.3",
     "vite": "^7.0.0",
     "vite-tsconfig-paths": "^4.2.0",
+    "vitest": "^4.1.10",
     "wrangler": "^4.76.0"
   },
   "type": "module"
