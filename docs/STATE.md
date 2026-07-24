@@ -23,7 +23,7 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **UI libraries**: `@voltui/components@0.6.0` for every base component and `angular-movement@0.5.0` for every animation, both by the same author and consumed here on purpose as a real integration test — see [LIB-FINDINGS.md](./LIB-FINDINGS.md).
 - **Theme reveal** (`src/services/theme-reveal.ts`): the circular wipe on generate/mode-switch. Paints the overlay with the _incoming_ color, expands a clip-path circle from the click point to the furthest viewport corner, commits the palette while covered, then uncovers. Driven by `MoveTrigger.play()` promises, not `setTimeout`.
 - **Tests**: 110 across 8 files. `pnpm test`.
-- **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`.
+- **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`. The Action passes `gitHubToken` to `wrangler-action` (with `deployments: write`) so each Cloudflare deploy registers a GitHub Deployment and shows in the repo's Deployments/Environments sidebar — but only once the deploy actually runs (see the missing-secrets note below).
 
 ## What's missing / broken (don't assume it works)
 

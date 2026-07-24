@@ -8,6 +8,10 @@ on:
 
 permissions:
   contents: read
+  # Lets wrangler-action register a GitHub Deployment (the "Deployments"
+  # sidebar / Environments) for each Cloudflare Pages deploy — see the
+  # `gitHubToken` on the deploy step below.
+  deployments: write
 
 concurrency:
   group: cloudflare-deploy-production
@@ -72,3 +76,8 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
           command: pages deploy --branch=main
+          # With a token, wrangler creates a GitHub Deployment for this Pages
+          # deploy, so it shows up in the repo's Deployments/Environments
+          # sidebar (instead of only Vercel's). GITHUB_TOKEN is provided by
+          # Actions automatically; it needs `deployments: write` above.
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
