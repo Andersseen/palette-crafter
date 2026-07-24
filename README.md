@@ -238,10 +238,7 @@ The golden rule: **the playground and the API can never diverge**, because they 
 
 Palette Crafter deploys to **Cloudflare Pages** — no infrastructure of our own to maintain.
 
-Production builds on every push to `main` through Cloudflare Pages' built-in Git integration:
-
-- **Build command** — `pnpm build:cf`
-- **Output directory** — `dist/analog/public`
+A GitHub Action ([`.github/workflows/deploy-cloudflare.yml`](.github/workflows/deploy-cloudflare.yml)) deploys on every push to `main`. It needs two repository secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
 To build and deploy from your machine instead:
 
