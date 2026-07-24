@@ -1,41 +1,95 @@
-# Palette Crafter
+<div align="center">
 
-Palette Crafter generates deterministic, accessible color palettes — as a visual
-playground and as an HTTP API. Both run the same generator, so a palette is
-identical whichever way you ask for it.
+# 🎨 Palette Crafter
 
-- **Playground** — start from a brand hex or a random seed, lock what you like,
-  reroll the rest, see the WCAG audit, export in six formats, share the link.
-- **HTTP API** — `/api/v2/theme`, CORS-enabled and edge-cacheable.
+**Deterministic, accessible color palettes — a visual playground _and_ an HTTP API.**
 
-## Stack
+Both run the exact same generator, so a palette is identical whether you click for it or `curl` it.
 
-- Angular 21 (standalone components, zoneless)
-- AnalogJS (SSR + file-based routing + API routes)
-- Vite + Nitro
-- Tailwind CSS v4
-- Cloudflare Pages deployment via Wrangler
+<br/>
 
-## Quick Start
+[![Angular](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white&style=flat-square)](https://angular.dev)
+[![AnalogJS](https://img.shields.io/badge/AnalogJS-SSR%20%2B%20API-C10F3A?style=flat-square)](https://analogjs.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?logo=tailwindcss&logoColor=white&style=flat-square)](https://tailwindcss.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white&style=flat-square)](https://www.typescriptlang.org)
+[![Cloudflare Pages](https://img.shields.io/badge/Cloudflare_Pages-deployed-F38020?logo=cloudflare&logoColor=white&style=flat-square)](https://palette-crafter.pages.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](#-license)
 
-Requires Node.js 20+ and pnpm 10+.
+<br/>
+
+### [🌐 Live demo](https://palette-crafter.pages.dev) · [⚡ HTTP API](#-http-api) · [📦 Export formats](#-export-formats)
+
+<br/>
+
+![Palette Crafter — perceptual OKLCH color scales](docs/assets/scales.png)
+
+</div>
+
+---
+
+## ✨ Highlights
+
+- 🎯 **Deterministic** — the same `seed` always returns the same palette. Share a link, get the exact colors back.
+- 🌈 **Perceptual OKLCH scales** — 50 → 950 shades with chroma tapering and gamut mapping that never shifts hue.
+- 🎨 **Your brand hex, preserved exactly** — pass `baseColor` and your real color appears verbatim in the scale.
+- ♿ **WCAG-audited, not assumed** — every pair the theme actually renders is measured and graded AA/AAA.
+- 📦 **Six export formats** — Tailwind v4, CSS variables, SCSS, JSON, shadcn/ui, and W3C Design Tokens.
+- ⚡ **Edge-cacheable API** — `GET`/`POST`, CORS-enabled, deployed on Cloudflare Pages.
+- 🌗 **Light & dark** — both modes generated from the same intent, each contrast-checked on its own.
+
+---
+
+## 🖼️ A look around
+
+<table>
+  <tr>
+    <td width="50%">
+      <strong>🧩 Preview — the palette on real components</strong><br/>
+      <img src="docs/assets/preview.png" alt="Palette applied to buttons, badges, forms and indicators" />
+    </td>
+    <td width="50%">
+      <strong>♿ Accessibility — per-pair WCAG audit</strong><br/>
+      <img src="docs/assets/accessibility.png" alt="Contrast ratios graded AA/AAA for each rendered pair" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>📦 Export — copy-paste ready output</strong><br/>
+      <img src="docs/assets/export.png" alt="Tailwind v4 @theme block and other export formats" />
+    </td>
+    <td width="50%">
+      <strong>🌗 Light mode — same intent, re-checked</strong><br/>
+      <img src="docs/assets/preview-light.png" alt="The playground in light mode with a different palette" />
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🚀 Quick start
+
+> Requires **Node.js 20+** and **pnpm 10+**.
 
 ```bash
 pnpm install
 pnpm dev            # http://localhost:4200
 ```
 
-## Scripts
+### 🎛️ Scripts
 
-- `pnpm dev` — local development server.
-- `pnpm test` — run the test suite (`pnpm test:watch` for the watcher).
-- `pnpm build` — production build.
-- `pnpm build:cf` — production build targeting the Cloudflare Pages preset.
-- `pnpm dev:cf` — local Cloudflare Pages preview.
-- `pnpm deploy:cf` — deploy to Cloudflare Pages.
-- `pnpm clean` — remove build artifacts and the Angular cache.
+| Script            | What it does                                     |
+| ----------------- | ------------------------------------------------ |
+| `pnpm dev`        | Local development server.                        |
+| `pnpm build`      | Production build.                                |
+| `pnpm test`       | Run the test suite (`pnpm test:watch` to watch). |
+| `pnpm build:cf`   | Build targeting the Cloudflare Pages preset.     |
+| `pnpm dev:cf`     | Local Cloudflare Pages preview.                  |
+| `pnpm deploy:cf`  | Deploy to Cloudflare Pages.                      |
+| `pnpm clean`      | Remove build artifacts and the Angular cache.    |
 
-## Theme API
+---
+
+## ⚡ HTTP API
 
 Two versions, both accepting `GET` and `POST`:
 
@@ -44,58 +98,55 @@ Two versions, both accepting `GET` and `POST`:
 | `/api/v1/theme`  | `v1`      | Existing integrations. **Frozen forever.**  |
 | `/api/v2/theme`  | `v2`      | Everything new.                             |
 
-`v1` is frozen: a seed that worked a year ago returns exactly the same colors
-today, and always will. `v2` is the current algorithm — perceptual OKLCH scales,
-your brand hex preserved exactly, and AAA-level body text.
+`v1` is frozen — a seed that worked a year ago returns exactly the same colors today, and always will.
+`v2` is the current algorithm: perceptual OKLCH scales, your brand hex preserved exactly, and AAA-level body text.
 
-### Params
+### Parameters
 
-Accepted in the query string or in a JSON body.
+Accepted in the query string or a JSON body.
 
-| Param       | Values                                                            | Notes                                                       |
-| ----------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |
-| `mode`      | `light` \| `dark`                                                 | Defaults to `light`.                                        |
-| `seed`      | string (≤256 chars) \| number                                     | Same seed ⇒ same colors. Omit it and you get a random one.   |
-| `baseHue`   | `0..360`                                                          | Ignored when `baseColor` is given.                          |
-| `baseColor` | hex, e.g. `#ff6b35` or `#f63`                                     | **v2 only.** Appears verbatim in the generated scale.        |
-| `harmony`   | `analogous` \| `complementary` \| `split-complementary` \| `triadic` | Picks the secondary hue.                                  |
-| `algorithm` | `v1` \| `v2`                                                      | Overrides the route default.                                |
-| `format`    | see [Export formats](#export-formats)                             | Returns a rendered file instead of JSON.                    |
-| `contrast`  | `true`                                                            | Adds the WCAG audit to the response.                        |
+| Param       | Values                                                              | Notes                                                      |
+| ----------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `mode`      | `light` \| `dark`                                                  | Defaults to `light`.                                       |
+| `seed`      | string (≤256 chars) \| number                                      | Same seed ⇒ same colors. Omit it for a random one.         |
+| `baseHue`   | `0..360`                                                           | Ignored when `baseColor` is given.                         |
+| `baseColor` | hex, e.g. `#ff6b35` or `#f63`                                       | **v2 only.** Appears verbatim in the generated scale.      |
+| `harmony`   | `analogous` \| `complementary` \| `split-complementary` \| `triadic` | Picks the secondary hue.                                   |
+| `algorithm` | `v1` \| `v2`                                                       | Overrides the route default.                               |
+| `format`    | see [Export formats](#-export-formats)                             | Returns a rendered file instead of JSON.                   |
+| `contrast`  | `true`                                                             | Adds the WCAG audit to the response.                       |
 
-Every invalid value returns `400` with a message saying what was wrong —
-including an unparseable `baseHue`, which is not silently ignored.
+Every invalid value returns `400` with a message saying what was wrong — including an unparseable `baseHue`, which is never silently ignored.
 
 ### Examples
 
 ```bash
 # Deterministic: this returns the same colors every time.
-curl -s "http://localhost:4200/api/v2/theme?seed=brand-a&mode=dark&harmony=triadic"
+curl -s "https://palette-crafter.pages.dev/api/v2/theme?seed=brand-a&mode=dark&harmony=triadic"
 
 # Build a palette around your actual brand color.
-curl -s "http://localhost:4200/api/v2/theme?baseColor=%23ff6b35"
+curl -s "https://palette-crafter.pages.dev/api/v2/theme?baseColor=%23ff6b35"
 
 # Get a ready-to-paste Tailwind v4 @theme block.
-curl -s "http://localhost:4200/api/v2/theme?seed=acme&format=tailwind" > theme.css
+curl -s "https://palette-crafter.pages.dev/api/v2/theme?seed=acme&format=tailwind" > theme.css
 
 # Include the accessibility audit.
-curl -s "http://localhost:4200/api/v2/theme?seed=acme&contrast=true"
+curl -s "https://palette-crafter.pages.dev/api/v2/theme?seed=acme&contrast=true"
 
 # POST works too.
-curl -sS -X POST "http://localhost:4200/api/v2/theme" \
+curl -sS -X POST "https://palette-crafter.pages.dev/api/v2/theme" \
   -H "Content-Type: application/json" \
   -d '{"mode":"light","seed":"landing-v1","harmony":"complementary"}'
 ```
 
-### CORS and caching
+### CORS & caching
 
-- `Access-Control-Allow-Origin: *`, with `OPTIONS` preflight answered `204`.
-  The API is public and read-only, and carries no credentials.
-- Seeded requests are deterministic and therefore cacheable:
-  `public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800`.
+- `Access-Control-Allow-Origin: *`, with `OPTIONS` preflight answered `204`. The API is public, read-only, and carries no credentials.
+- Seeded requests are deterministic and therefore cacheable: `public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800`.
 - Unseeded requests are random and served `no-store`.
 
-### Response shape
+<details>
+<summary><strong>Response shape</strong></summary>
 
 ```json
 {
@@ -132,43 +183,67 @@ curl -sS -X POST "http://localhost:4200/api/v2/theme" \
 
 `meta` may gain fields over time; `theme` is stable per algorithm version.
 
-## Export formats
+</details>
 
-Available in the playground and through `?format=` on the API. All of them emit
-**literal color values**, so a pasted snippet works without anything else from
-this project.
+---
 
-| `format`         | Output                                                |
-| ---------------- | ----------------------------------------------------- |
-| `tailwind`       | Tailwind v4 `@theme` block                            |
-| `css`            | Plain custom properties on `:root`                    |
-| `scss`           | SCSS variables plus a `$palette` map                  |
-| `json`           | The raw theme payload                                 |
-| `shadcn`         | Semantic tokens in the shape shadcn/ui expects        |
-| `design-tokens`  | W3C Design Tokens, for Figma and Style Dictionary     |
+## 📦 Export formats
 
-## Accessibility
+Available in the playground and through `?format=` on the API. All of them emit **literal color values**, so a pasted snippet works without anything else from this project.
 
-Contrast is measured, not assumed. `buildContrastReport` audits the pairs the
-theme actually renders — including semi-transparent tokens composited at their
-real opacity — and grades each against WCAG AA/AAA. When a pair falls short it
-names the scale shade that would pass, rather than just reporting a failure.
+| `format`         | Output                                             |
+| ---------------- | -------------------------------------------------- |
+| `tailwind`       | Tailwind v4 `@theme` block                         |
+| `css`            | Plain custom properties on `:root`                 |
+| `scss`           | SCSS variables plus a `$palette` map               |
+| `json`           | The raw theme payload                              |
+| `shadcn`         | Semantic tokens in the shape shadcn/ui expects     |
+| `design-tokens`  | W3C Design Tokens, for Figma and Style Dictionary  |
 
-In `v2` the body text pair targets 7:1 (AAA), and the primary button label
-resolves to the same color for every hue, so palettes from the same tool don't
-disagree with each other.
+---
 
-## Project structure
+## ♿ Accessibility
 
-- `src/shared/` — the generator, exports and contrast logic. Framework-agnostic
-  and free of environment-specific globals, since it runs in the browser, under
-  SSR, and inside the Cloudflare Worker.
-- `src/server/handlers/` — shared API logic (validation, CORS, caching).
-- `src/server/routes/api/` — thin route files for `v1` and `v2`.
-- `src/services/color-palette.ts` — Angular signal state; generates in-process.
-- `src/components/`, `src/app/pages/` — the playground UI.
+Contrast is **measured, not assumed**. `buildContrastReport` audits the pairs the theme actually renders — including semi-transparent tokens composited at their real opacity — and grades each against WCAG AA/AAA. When a pair falls short, it names the scale shade that _would_ pass instead of just reporting a failure.
 
-## Cloudflare Pages deployment
+In `v2` the body-text pair targets 7:1 (AAA), and the primary button label resolves to the same color for every hue, so palettes from the same tool never disagree with each other.
+
+---
+
+## 🧱 Stack
+
+- **Angular 21** — standalone components, zoneless.
+- **AnalogJS** — SSR + file-based routing + API routes.
+- **Vite + Nitro** — build and server runtime.
+- **Tailwind CSS v4** — styling.
+- **Cloudflare Pages** — deployment via Wrangler.
+
+### 🗂️ Project structure
+
+```
+src/shared/           → pure logic: color math, generator, exports, contrast
+                        (no Angular/DOM imports — runs in browser, SSR, and Worker)
+src/server/handlers/  → shared API logic (validation, CORS, caching)
+src/server/routes/    → thin route files for /api/v1 and /api/v2
+src/services/         → Angular signal state; generates in-process
+src/components/       → standalone playground UI components
+src/app/pages/        → AnalogJS file-based routes
+```
+
+The golden rule: **the playground and the API can never diverge**, because they literally call the same `generateTheme` function.
+
+---
+
+## ☁️ Deployment
+
+Palette Crafter deploys to **Cloudflare Pages** — no infrastructure of our own to maintain.
+
+Production builds on every push to `main` through Cloudflare Pages' built-in Git integration:
+
+- **Build command** — `pnpm build:cf`
+- **Output directory** — `dist/analog/public`
+
+To build and deploy from your machine instead:
 
 ```bash
 pnpm wrangler login   # once
@@ -176,12 +251,14 @@ pnpm dev:cf           # build and preview locally
 pnpm deploy:cf        # deploy
 ```
 
-For GitHub Actions deploys on `main`, configure `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID`.
+---
 
-## For AI agents
+## 🤖 For AI agents
 
-Start at [AGENTS.md](./AGENTS.md) — it points to project context, current state,
-and repo-specific conventions in `docs/`. Before changing the generator, read
-[docs/CONVENTIONS.md](./docs/CONVENTIONS.md) rule 2: `v1` output is frozen and
-there is a test that will catch you.
+Start at [AGENTS.md](./AGENTS.md) — it points to project context, current state, and repo-specific conventions in [`docs/`](./docs). Before changing the generator, read [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) rule 2: `v1` output is frozen, and there is a test that will catch you.
+
+---
+
+## 📄 License
+
+[MIT](./LICENSE) © [Andrii Pap](https://github.com/Andersseen)

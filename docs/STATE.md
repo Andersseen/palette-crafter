@@ -2,7 +2,7 @@
 
 > Snapshot meant to be pasted at the start of a new session (with any model/tool) when there's no time for it to read the whole repo. Update it when you finish a relevant change — otherwise it lies and confuses more than it helps.
 >
-> Last updated: 2026-07-22 (branch `main`; claims verified by running the test suite, the build, and curl against a dev server on that date).
+> Last updated: 2026-07-24 (branch `main`; deploy pipeline consolidated to Cloudflare's Git integration and the GitHub Action removed — see the Deploy notes below. Earlier claims verified on 2026-07-22 by running the test suite, the build, and curl against a dev server).
 
 ## One-sentence summary
 
@@ -23,7 +23,7 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **UI libraries**: `@voltui/components@0.6.0` for every base component and `angular-movement@0.5.0` for every animation, both by the same author and consumed here on purpose as a real integration test — see [LIB-FINDINGS.md](./LIB-FINDINGS.md).
 - **Theme reveal** (`src/services/theme-reveal.ts`): the circular wipe on generate/mode-switch. Paints the overlay with the _incoming_ color, expands a clip-path circle from the click point to the furthest viewport corner, commits the palette while covered, then uncovers. Driven by `MoveTrigger.play()` promises, not `setTimeout`.
 - **Tests**: 110 across 8 files. `pnpm test`.
-- **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`.
+- **Deploy**: Cloudflare Pages. Production builds on push to `main` via Cloudflare Pages' built-in Git integration (build command `pnpm build:cf`, output dir `dist/analog/public`); `pnpm deploy:cf` still deploys manually with Wrangler. The old GitHub Actions workflow was removed on 2026-07-24 — see the note under "What's missing / broken".
 
 ## What's missing / broken (don't assume it works)
 
@@ -32,7 +32,7 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **Naming/branding unified to `palette-forge` (2026-07-06)**: `package.json` (name, repository, bugs, homepage → `https://palette-forge.pages.dev`), `wrangler.jsonc`, `angular.json`, the HTML title, the UI `<h1>` and the `localStorage` key already use `palette-forge` / "Palette Forge"; the GitHub repo is `Andersseen/palette-forge` and the canonical deploy is Cloudflare Pages (the old Vercel URL was dropped). Two deliberate leftovers:
   1. ~~Renaming `wrangler.jsonc.name` means the next deploy targets a Cloudflare Pages project named `palette-forge` — it must be created once.~~ **This is what broke CI** (2026-07-22): `wrangler pages deploy` cannot create a project non-interactively, so it failed with a bare `exit code 1`. Verified with `wrangler pages project list` — only `palette-crafter` exists; `palette-forge` returns `Project not found [code: 8000007]`. `wrangler.jsonc.name` now points back at **`palette-crafter`**, the project that actually exists and holds the current deploys. Before changing that name again, create the target project first.
   2. The home page seed is still `"palette-crafter-home"` (`src/app/pages/(home).page.ts`) **on purpose**: changing the seed string would change the page's default colors (the seed determines the output — see CONVENTIONS.md #2).
-- **Deploy CI is red: the Cloudflare secrets do not exist (2026-07-22)**. `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are referenced by the workflow but the repo has **zero** secrets configured — repo-level and in both the `Production` and `Preview` environments (`gh api repos/Andersseen/palette-crafter/actions/secrets` → `total_count: 0`). `wrangler-action` forwards the empty token anyway, so wrangler fails with `In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable`, surfacing as another bare `exit code 1`. **This is not a code fix — someone has to add the two secrets.** The workflow now fails early with a named error instead, so the next red run says which secret is missing. Note this is a _different_ cause from the project-name break above; both produced the same useless `exit code 1`.
+- **Deployment consolidated to Cloudflare (2026-07-24)**: the GitHub Actions workflow (`deploy-cloudflare.yml`) was **removed** in favour of Cloudflare Pages' built-in Git integration, so there are no Cloudflare secrets to manage in the repo any more (that workflow used to fail red because `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` were never configured). **Still an open infra task, not a code fix**: as of this change Vercel's GitHub integration was *still* auto-deploying (`vercel[bot]`, last seen 2026-07-23), so it must be disconnected from the Vercel dashboard to actually have a single deploy target. The live site (`https://palette-crafter.pages.dev`) already responds `200`.
 - **A single real page**: `src/app/pages/(home).page.ts` is the only content route (AnalogJS file-based routing). No additional routes yet.
 
 ## Architecture in 30 seconds
