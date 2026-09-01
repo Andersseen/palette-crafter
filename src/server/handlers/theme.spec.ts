@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { H3Event } from "h3";
 
-import { createThemeHandler } from "./theme";
+import { createThemeFamilyHandler, createThemeHandler } from "./theme";
 
 /**
  * The handler only touches h3 through a handful of helpers, so stubbing them is
@@ -37,9 +37,11 @@ vi.mock("h3", () => ({
 const event = {} as H3Event;
 const v1 = createThemeHandler("v1");
 const v2 = createThemeHandler("v2");
+const familyV2 = createThemeFamilyHandler("v2");
+type TestHandler = (event: H3Event) => Promise<unknown>;
 
 const call = (
-  handler: typeof v1,
+  handler: TestHandler,
   {
     method = "GET",
     query = {},
@@ -225,5 +227,90 @@ describe("theme handler output", () => {
     })) as { theme: { primary: { DEFAULT: string } } };
 
     expect(result.theme.primary.DEFAULT).toBe("#3366cc");
+  });
+});
+
+describe("theme family handler", () => {
+  it("returns the machine-to-machine contract over GET", async () => {
+    const result = (await call(familyV2, {
+      query: {
+        seed: "brand-a",
+        baseColor: "#ff6b35",
+        harmony: "triadic",
+      },
+    })) as unknown as {
+      ok: true;
+      contractVersion: number;
+      algorithm: string;
+      themes: { light: { bg: string }; dark: { bg: string } };
+      meta: { seed: string; baseColor: string; harmony: string };
+    };
+
+    expect(result.ok).toBe(true);
+    expect(result.contractVersion).toBe(1);
+    expect(result.algorithm).toBe("v2");
+    expect(result.themes.light.bg).not.toBe(result.themes.dark.bg);
+    expect(result.meta).toMatchObject({
+      seed: "brand-a",
+      baseColor: "#ff6b35",
+      harmony: "triadic",
+    });
+  });
+
+  it("accepts POST body parameters", async () => {
+    const result = (await call(familyV2, {
+      method: "POST",
+      query: { seed: "query-seed" },
+      body: { seed: "body-seed", harmony: "complementary" },
+    })) as { meta: { seed: string; harmony: string } };
+
+    expect(result.meta.seed).toBe("body-seed");
+    expect(result.meta.harmony).toBe("complementary");
+  });
+
+  it("rejects invalid baseColor and harmony", async () => {
+    await expectStatus(
+      call(familyV2, { query: { baseColor: "chartreuse" } }),
+      400,
+    );
+    await expectStatus(
+      call(familyV2, { query: { harmony: "tetradic" } }),
+      400,
+    );
+  });
+
+  it("uses deterministic caching only when a seed exists", async () => {
+    await call(familyV2, { query: { seed: "brand-a" } });
+    expect(state.headers["Cache-Control"]).toContain("public");
+
+    await call(familyV2, {});
+    expect(state.headers["Cache-Control"]).toBe("no-store");
+  });
+
+  it("returns Volt CSS when requested", async () => {
+    const result = await call(familyV2, {
+      query: { seed: "brand-a", format: "volt" },
+    });
+
+    expect(typeof result).toBe("string");
+    expect(result as string).toContain(":root {");
+    expect(result as string).toContain(".dark {");
+    expect(state.headers["Content-Type"]).toContain("text/css");
+  });
+
+  it("keeps format=json on the default contract shape", async () => {
+    const result = (await call(familyV2, {
+      query: { seed: "brand-a", format: "json" },
+    })) as { contractVersion?: number; themes?: unknown };
+
+    expect(result.contractVersion).toBe(1);
+    expect(result.themes).toBeDefined();
+  });
+
+  it("rejects single-theme-only export formats", async () => {
+    await expectStatus(
+      call(familyV2, { query: { seed: "brand-a", format: "tailwind" } }),
+      400,
+    );
   });
 });

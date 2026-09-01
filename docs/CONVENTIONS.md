@@ -43,6 +43,8 @@ Two non-obvious details that break things if ignored:
 
 If you add a new color token (another status color, for example), it must follow this pattern exactly (name and format) or the Tailwind `@theme` generation (`getTailwindConfig()`) and the CSS in `styles.css` break.
 
+Volt-specific semantic mapping belongs in the export/adapter layer (`src/shared/volt.ts`), not in `generateTheme()`. Palette Crafter's core theme shape stays generic; Volt can consume it through a first-class adapter.
+
 ## 4. Path aliases — use them, not long relative imports
 
 `tsconfig.json` defines `@app/*`, `@components/*`, `@types/*`, `@services/*`, `@shared/*`. Use them in `src/app`, `src/components`, `src/services`. The exceptions are inside `src/shared/` itself (which references itself with `./` because it's its own folder) and the server endpoint (see rule 1).
@@ -54,9 +56,9 @@ The project uses `provideZonelessChangeDetection()`. That means:
 - Reactive state goes through `signal()`/`computed()`, not Zone.js-based change detection or patterns that assume a `setTimeout`/promise triggers automatic detection.
 - Any access to `window`, `document`, `localStorage` or browser-only APIs must sit behind `isPlatformBrowser(inject(PLATFORM_ID))` — the tree is also rendered on SSR (`provideClientHydration(withEventReplay())`), and touching those APIs on the server breaks the build/render.
 
-## 6. `@voltui/components` is a versioned external dependency (0.1.0, pre-1.0)
+## 6. `@voltui/components` is a versioned external dependency (0.6.0, pre-1.0)
 
-It's the component library by the same author, developed in the sibling repo `volt-ui`. It's at an early version (`0.1.0`) — its API may change between versions. Before using a component you haven't already seen used in this repo:
+It's the component library by the same author, developed in the sibling repo `volt-ui`. It's at an early version (`0.6.0`) — its API may change between versions. Before using a component you haven't already seen used in this repo:
 
 - Check `node_modules/@voltui/components` (types + README) or the source in `volt-ui/projects/volt/src/lib/components/<component>` to see the real API; don't assume from the name.
 - Don't modify `@voltui/components` code from this repo — design system changes belong in `volt-ui`.
@@ -64,7 +66,7 @@ It's the component library by the same author, developed in the sibling repo `vo
 
 ## 7. Testing works; linting still does not exist
 
-`pnpm test` runs 100 Vitest tests (`pnpm test:watch` for the watcher). Add tests for anything you change in `src/shared/` — it is pure logic with no setup cost, and it is what the API contract rests on.
+`pnpm test` runs 136 Vitest tests (`pnpm test:watch` for the watcher). Add tests for anything you change in `src/shared/` — it is pure logic with no setup cost, and it is what the API contract rests on.
 
 There is still **no linter or formatter configured** (no `eslint.config.*`, no `.prettierrc`). Don't assume `pnpm lint` exists. The surrounding code style is the only contract.
 

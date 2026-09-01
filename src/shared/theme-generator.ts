@@ -14,6 +14,8 @@ import type {
   HarmonyType,
   Theme,
   ThemeAlgorithm,
+  ThemeFamily,
+  ThemeFamilyMeta,
   ThemeMode,
 } from "./types";
 
@@ -44,6 +46,11 @@ export interface ThemeGenerationResult {
     baseColor?: string;
   };
 }
+
+export type ThemeFamilyGenerationOptions = Omit<
+  ThemeGenerationOptions,
+  "mode"
+>;
 
 const HARMONIES: HarmonyType[] = [
   "analogous",
@@ -99,6 +106,40 @@ const secondaryHueForHarmony = (
     default:
       return (baseHue + 120) % 360;
   }
+};
+
+const resolveThemeIdentity = (
+  options: ThemeGenerationOptions,
+): ThemeFamilyMeta => {
+  const algorithm: ThemeAlgorithm = options.algorithm ?? "v1";
+  const seeded = options.seed !== undefined;
+  const random = seeded
+    ? mulberry32(normalizeSeed(options.seed as number | string))
+    : Math.random;
+
+  const baseColor =
+    algorithm === "v2" && options.baseColor
+      ? (normalizeHex(options.baseColor) ?? undefined)
+      : undefined;
+
+  // Order and laziness of `random()` consumption are part of the v1 contract:
+  // the hue draw only happens when no explicit hue is supplied, so pulling it
+  // eagerly would shift every subsequent draw and change existing seeds.
+  const baseHue = baseColor
+    ? clampHue(hexToOklch(baseColor).h)
+    : clampHue(options.baseHue ?? Math.floor(random() * 360));
+  const harmony = options.harmony ?? pickHarmony(random);
+  const secondaryHue = secondaryHueForHarmony(baseHue, harmony);
+
+  return {
+    baseHue,
+    secondaryHue,
+    harmony,
+    seeded,
+    algorithm,
+    ...(seeded ? { seed: options.seed } : {}),
+    ...(baseColor ? { baseColor } : {}),
+  };
 };
 
 /** v1 foreground nudging: walks HSL lightness until it clears 4.5:1. */
@@ -280,42 +321,48 @@ export const generateTheme = (
   options: ThemeGenerationOptions = {},
 ): ThemeGenerationResult => {
   const mode: ThemeMode = options.mode ?? "light";
-  const algorithm: ThemeAlgorithm = options.algorithm ?? "v1";
-  const seeded = options.seed !== undefined;
-  const random = seeded
-    ? mulberry32(normalizeSeed(options.seed as number | string))
-    : Math.random;
-
-  const baseColor =
-    algorithm === "v2" && options.baseColor
-      ? (normalizeHex(options.baseColor) ?? undefined)
-      : undefined;
-
-  // Order and laziness of `random()` consumption are part of the v1 contract:
-  // the hue draw only happens when no explicit hue is supplied, so pulling it
-  // eagerly would shift every subsequent draw and change existing seeds.
-  const baseHue = baseColor
-    ? clampHue(hexToOklch(baseColor).h)
-    : clampHue(options.baseHue ?? Math.floor(random() * 360));
-  const harmony = options.harmony ?? pickHarmony(random);
-  const secondaryHue = secondaryHueForHarmony(baseHue, harmony);
+  const identity = resolveThemeIdentity(options);
 
   const theme =
-    algorithm === "v2"
-      ? generateV2Theme(mode, baseHue, secondaryHue, baseColor)
-      : generateV1Theme(mode, baseHue, secondaryHue);
+    identity.algorithm === "v2"
+      ? generateV2Theme(
+          mode,
+          identity.baseHue,
+          identity.secondaryHue,
+          identity.baseColor,
+        )
+      : generateV1Theme(mode, identity.baseHue, identity.secondaryHue);
 
   return {
     theme,
     meta: {
       mode,
-      baseHue,
-      secondaryHue,
-      harmony,
-      seeded,
-      algorithm,
-      ...(seeded ? { seed: options.seed } : {}),
-      ...(baseColor ? { baseColor } : {}),
+      ...identity,
     },
+  };
+};
+
+export const generateThemeFamily = (
+  options: ThemeFamilyGenerationOptions = {},
+): ThemeFamily => {
+  const identity = resolveThemeIdentity({
+    ...options,
+    algorithm: options.algorithm ?? "v2",
+  });
+
+  const buildTheme = (mode: ThemeMode): Theme =>
+    identity.algorithm === "v2"
+      ? generateV2Theme(
+          mode,
+          identity.baseHue,
+          identity.secondaryHue,
+          identity.baseColor,
+        )
+      : generateV1Theme(mode, identity.baseHue, identity.secondaryHue);
+
+  return {
+    light: buildTheme("light"),
+    dark: buildTheme("dark"),
+    meta: identity,
   };
 };
