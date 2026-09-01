@@ -12,12 +12,14 @@ import {
 // resolve the `@shared/*` alias. See docs/CONVENTIONS.md #1.
 import {
   exportTheme,
+  exportThemeFamily,
   isExportFormat,
   EXPORT_FORMATS,
 } from "../../shared/export";
 import { buildContrastReport } from "../../shared/contrast";
 import {
   generateTheme,
+  generateThemeFamily,
   type ThemeGenerationOptions,
 } from "../../shared/theme-generator";
 import { normalizeHex } from "../../shared/utils";
@@ -25,6 +27,7 @@ import type {
   ExportFormat,
   HarmonyType,
   ThemeAlgorithm,
+  ThemeFamilyApiRequest,
   ThemeApiRequest,
   ThemeMode,
 } from "../../shared/types";
@@ -158,6 +161,20 @@ const readFormat = (value: unknown): ExportFormat | undefined => {
   return value;
 };
 
+const readThemeFamilyFormat = (value: unknown): ExportFormat | undefined => {
+  if (value === "json") {
+    return undefined;
+  }
+
+  const format = readFormat(value);
+
+  if (format && format !== "volt") {
+    throw badRequest("Invalid format for theme-family. Use volt.");
+  }
+
+  return format;
+};
+
 const applyCorsHeaders = (event: H3Event): void => {
   // Public read-only API: any origin may call it, and it carries no credentials.
   setResponseHeader(event, "Access-Control-Allow-Origin", "*");
@@ -184,6 +201,56 @@ const firstQueryValue = (
   value: string | string[] | undefined,
 ): string | undefined => (Array.isArray(value) ? value[0] : value);
 
+const readThemePayload = (
+  query: ReturnType<typeof getQuery>,
+  body: ThemeApiRequest,
+): ThemeApiRequest => ({
+  mode: (body?.mode ?? firstQueryValue(query["mode"])) as
+    | ThemeMode
+    | undefined,
+  seed: body?.seed ?? firstQueryValue(query["seed"]),
+  baseHue: (body?.baseHue ?? firstQueryValue(query["baseHue"])) as
+    | number
+    | undefined,
+  harmony: (body?.harmony ?? firstQueryValue(query["harmony"])) as
+    | HarmonyType
+    | undefined,
+  baseColor: (body?.baseColor ?? firstQueryValue(query["baseColor"])) as
+    | string
+    | undefined,
+  algorithm: (body?.algorithm ?? firstQueryValue(query["algorithm"])) as
+    | ThemeAlgorithm
+    | undefined,
+});
+
+const readThemeFamilyPayload = (
+  query: ReturnType<typeof getQuery>,
+  body: ThemeFamilyApiRequest,
+): ThemeFamilyApiRequest => ({
+  seed: body?.seed ?? firstQueryValue(query["seed"]),
+  baseHue: (body?.baseHue ?? firstQueryValue(query["baseHue"])) as
+    | number
+    | undefined,
+  harmony: (body?.harmony ?? firstQueryValue(query["harmony"])) as
+    | HarmonyType
+    | undefined,
+  baseColor: (body?.baseColor ?? firstQueryValue(query["baseColor"])) as
+    | string
+    | undefined,
+  algorithm: (body?.algorithm ?? firstQueryValue(query["algorithm"])) as
+    | ThemeAlgorithm
+    | undefined,
+});
+
+const assertApiMethod = (method: string): void => {
+  if (method !== "GET" && method !== "POST") {
+    throw createError({
+      statusCode: 405,
+      statusMessage: "Method not allowed. Use GET or POST.",
+    });
+  }
+};
+
 export const createThemeHandler = (defaultAlgorithm: ThemeAlgorithm) =>
   async (event: H3Event) => {
     const method = getMethod(event).toUpperCase();
@@ -197,34 +264,11 @@ export const createThemeHandler = (defaultAlgorithm: ThemeAlgorithm) =>
       return null;
     }
 
-    if (method !== "GET" && method !== "POST") {
-      throw createError({
-        statusCode: 405,
-        statusMessage: "Method not allowed. Use GET or POST.",
-      });
-    }
+    assertApiMethod(method);
 
     const query = getQuery(event);
     const body = method === "POST" ? await readBody<ThemeApiRequest>(event) : {};
-
-    const payload: ThemeApiRequest = {
-      mode: (body?.mode ?? firstQueryValue(query["mode"])) as
-        | ThemeMode
-        | undefined,
-      seed: body?.seed ?? firstQueryValue(query["seed"]),
-      baseHue: (body?.baseHue ?? firstQueryValue(query["baseHue"])) as
-        | number
-        | undefined,
-      harmony: (body?.harmony ?? firstQueryValue(query["harmony"])) as
-        | HarmonyType
-        | undefined,
-      baseColor: (body?.baseColor ?? firstQueryValue(query["baseColor"])) as
-        | string
-        | undefined,
-      algorithm: (body?.algorithm ?? firstQueryValue(query["algorithm"])) as
-        | ThemeAlgorithm
-        | undefined,
-    };
+    const payload = readThemePayload(query, body);
 
     const format = readFormat(firstQueryValue(query["format"]));
     const options = normalizePayload(payload, defaultAlgorithm);
@@ -245,5 +289,46 @@ export const createThemeHandler = (defaultAlgorithm: ThemeAlgorithm) =>
       ok: true as const,
       ...result,
       ...(withContrast ? { contrast: buildContrastReport(result.theme) } : {}),
+    };
+  };
+
+export const createThemeFamilyHandler = (defaultAlgorithm: ThemeAlgorithm) =>
+  async (event: H3Event) => {
+    const method = getMethod(event).toUpperCase();
+
+    applyCorsHeaders(event);
+
+    if (method === "OPTIONS") {
+      setResponseStatus(event, 204);
+      return null;
+    }
+
+    assertApiMethod(method);
+
+    const query = getQuery(event);
+    const body =
+      method === "POST" ? await readBody<ThemeFamilyApiRequest>(event) : {};
+    const payload = readThemeFamilyPayload(query, body);
+    const format = readThemeFamilyFormat(firstQueryValue(query["format"]));
+    const options = normalizePayload(payload, defaultAlgorithm);
+    const family = generateThemeFamily(options);
+
+    applyCacheHeaders(event, options.seed !== undefined);
+
+    if (format) {
+      const info = EXPORT_FORMATS.find((entry) => entry.id === format)!;
+      setResponseHeader(event, "Content-Type", info.contentType);
+      return exportThemeFamily(format, { family });
+    }
+
+    return {
+      ok: true as const,
+      contractVersion: 1 as const,
+      algorithm: family.meta.algorithm,
+      themes: {
+        light: family.light,
+        dark: family.dark,
+      },
+      meta: family.meta,
     };
   };

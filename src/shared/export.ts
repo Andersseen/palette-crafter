@@ -5,13 +5,19 @@ import type {
   StatusColorName,
   Theme,
   ThemeApiMeta,
+  ThemeFamily,
 } from "./types";
 import { hexToRgb } from "./utils";
+import { exportVoltThemeCss, exportVoltThemeFamilyCss } from "./volt";
 
 export interface ExportContext {
   theme: Theme;
   meta: ThemeApiMeta;
   options?: ExportOptions;
+}
+
+export interface ThemeFamilyExportContext {
+  family: ThemeFamily;
 }
 
 export interface ExportFormatInfo {
@@ -58,6 +64,13 @@ export const EXPORT_FORMATS: ExportFormatInfo[] = [
     extension: "css",
     contentType: "text/css; charset=utf-8",
     description: "Semantic tokens in the shape shadcn/ui expects.",
+  },
+  {
+    id: "volt",
+    label: "Volt UI",
+    extension: "css",
+    contentType: "text/css; charset=utf-8",
+    description: "Semantic tokens matching Volt UI's current theme contract.",
   },
   {
     id: "design-tokens",
@@ -277,8 +290,8 @@ const toJson = ({ theme, meta }: ExportContext): string =>
   JSON.stringify({ theme, meta }, null, 2);
 
 /**
- * shadcn/ui semantic tokens. Mirrors the variables `@voltui/components` reads,
- * so the exported block themes a shadcn-style project the same way.
+ * shadcn/ui semantic tokens. Volt UI has its own first-class adapter/export in
+ * `volt.ts`; keep this exporter scoped to the shadcn shape.
  */
 const toShadcn = (context: ExportContext): string => {
   const { theme, meta } = context;
@@ -364,6 +377,7 @@ const EXPORTERS: Record<ExportFormat, (context: ExportContext) => string> = {
   scss: toScss,
   json: toJson,
   shadcn: toShadcn,
+  volt: ({ theme, meta }) => exportVoltThemeCss(theme, meta),
   "design-tokens": toDesignTokens,
 };
 
@@ -374,3 +388,18 @@ export const exportTheme = (
   format: ExportFormat,
   context: ExportContext,
 ): string => EXPORTERS[format](context);
+
+export const exportThemeFamily = (
+  format: ExportFormat,
+  context: ThemeFamilyExportContext,
+): string => {
+  if (format === "json") {
+    return JSON.stringify(context.family, null, 2);
+  }
+
+  if (format === "volt") {
+    return exportVoltThemeFamilyCss(context.family);
+  }
+
+  throw new Error(`ThemeFamily export does not support "${format}".`);
+};

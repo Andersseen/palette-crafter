@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   EXPORT_FORMATS,
+  exportThemeFamily,
   exportTheme,
   isExportFormat,
   permalinkFor,
   type ExportContext,
 } from "./export";
-import { generateTheme } from "./theme-generator";
+import { generateTheme, generateThemeFamily } from "./theme-generator";
 
 const build = (overrides: Partial<ExportContext> = {}): ExportContext => {
   const { theme, meta } = generateTheme({
@@ -102,6 +103,15 @@ describe("exportTheme", () => {
     expect(exportTheme("shadcn", build())).toContain(":root {");
   });
 
+  it("exports Volt semantic tokens for an individual theme", () => {
+    const output = exportTheme("volt", build());
+
+    expect(output).toContain(":root {");
+    expect(output).toContain("--surface:");
+    expect(output).toContain("--destructive:");
+    expect(output).not.toContain("undefined");
+  });
+
   it("embeds a reproducible permalink when the theme was seeded", () => {
     expect(exportTheme("css", build())).toContain("seed=export-fixture");
   });
@@ -109,6 +119,30 @@ describe("exportTheme", () => {
   it("says so when a palette cannot be reproduced", () => {
     const { theme, meta } = generateTheme({ algorithm: "v2" });
     expect(exportTheme("css", { theme, meta })).toContain("not reproducible");
+  });
+});
+
+describe("exportThemeFamily", () => {
+  it("exports Volt CSS with light and dark blocks", () => {
+    const family = generateThemeFamily({
+      seed: "family-export",
+      algorithm: "v2",
+    });
+    const output = exportThemeFamily("volt", { family });
+
+    expect(output).toContain(":root {");
+    expect(output).toContain(".dark {");
+    expect(output).toContain("--primary:");
+    expect(output).not.toContain("undefined");
+  });
+
+  it("exports parseable family JSON", () => {
+    const family = generateThemeFamily({ seed: "family-export" });
+    const output = JSON.parse(exportThemeFamily("json", { family }));
+
+    expect(output.meta.seed).toBe("family-export");
+    expect(output.light.bg).toBe(family.light.bg);
+    expect(output.dark.bg).toBe(family.dark.bg);
   });
 });
 

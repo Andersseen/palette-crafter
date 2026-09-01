@@ -33,7 +33,7 @@ Both run the exact same generator, so a palette is identical whether you click f
 - 🌈 **Perceptual OKLCH scales** — 50 → 950 shades with chroma tapering and gamut mapping that never shifts hue.
 - 🎨 **Your brand hex, preserved exactly** — pass `baseColor` and your real color appears verbatim in the scale.
 - ♿ **WCAG-audited, not assumed** — every pair the theme actually renders is measured and graded AA/AAA.
-- 📦 **Six export formats** — Tailwind v4, CSS variables, SCSS, JSON, shadcn/ui, and W3C Design Tokens.
+- 📦 **Seven export formats** — Tailwind v4, CSS variables, SCSS, JSON, shadcn/ui, Volt UI, and W3C Design Tokens.
 - ⚡ **Edge-cacheable API** — `GET`/`POST`, CORS-enabled, deployed on Cloudflare Pages.
 - 🌗 **Light & dark** — both modes generated from the same intent, each contrast-checked on its own.
 
@@ -97,6 +97,7 @@ Two versions, both accepting `GET` and `POST`:
 | ---------------- | --------- | ------------------------------------------- |
 | `/api/v1/theme`  | `v1`      | Existing integrations. **Frozen forever.**  |
 | `/api/v2/theme`  | `v2`      | Everything new.                             |
+| `/api/v2/theme-family` | `v2` | Tooling that needs coherent light + dark themes. |
 
 `v1` is frozen — a seed that worked a year ago returns exactly the same colors today, and always will.
 `v2` is the current algorithm: perceptual OKLCH scales, your brand hex preserved exactly, and AAA-level body text.
@@ -116,6 +117,8 @@ Accepted in the query string or a JSON body.
 | `format`    | see [Export formats](#-export-formats)                             | Returns a rendered file instead of JSON.                   |
 | `contrast`  | `true`                                                             | Adds the WCAG audit to the response.                       |
 
+`/api/v2/theme-family` accepts the same inputs except `mode`, because it returns both modes from one shared identity. Its JSON response includes `contractVersion: 1` separately from `algorithm`, so tooling can pin the response shape without confusing it with the color algorithm.
+
 Every invalid value returns `400` with a message saying what was wrong — including an unparseable `baseHue`, which is never silently ignored.
 
 ### Examples
@@ -132,6 +135,12 @@ curl -s "https://palette-crafter.pages.dev/api/v2/theme?seed=acme&format=tailwin
 
 # Include the accessibility audit.
 curl -s "https://palette-crafter.pages.dev/api/v2/theme?seed=acme&contrast=true"
+
+# Get a light + dark pair for creator/tooling integrations.
+curl -s "https://palette-crafter.pages.dev/api/v2/theme-family?seed=acme&baseColor=%23ff6b35"
+
+# Get Volt UI CSS with :root and .dark blocks.
+curl -s "https://palette-crafter.pages.dev/api/v2/theme-family?seed=acme&format=volt" > volt-theme.css
 
 # POST works too.
 curl -sS -X POST "https://palette-crafter.pages.dev/api/v2/theme" \
@@ -198,7 +207,10 @@ Available in the playground and through `?format=` on the API. All of them emit 
 | `scss`           | SCSS variables plus a `$palette` map               |
 | `json`           | The raw theme payload                              |
 | `shadcn`         | Semantic tokens in the shape shadcn/ui expects     |
+| `volt`           | Semantic tokens matching Volt UI's theme contract  |
 | `design-tokens`  | W3C Design Tokens, for Figma and Style Dictionary  |
+
+For `/api/v2/theme-family`, `format=volt` returns a complete CSS file with `:root` for light mode and `.dark` for dark mode.
 
 ---
 

@@ -9,14 +9,14 @@ Palette Crafter (npm and repo name: `palette-crafter`, matching the GitHub remot
 > **On the name.** An earlier version of this document claimed the project had been renamed to "Palette Forge" and that the GitHub repo was `Andersseen/palette-forge`. That was never true: the remote has always been `palette-crafter`. The `palette-forge` name reached `package.json`, `wrangler.jsonc`, the page title and these docs, while the repository, the directory and the home seed stayed `palette-crafter`. Unified back to **palette-crafter** on 2026-07-22. If you find `palette-forge` anywhere, it is a leftover, not the current name.
 
 1. **Visual playground** (`/`): a page where the user generates color themes (primary/secondary palette + status colors + background/text) and sees the result applied live to real UI components (`@voltui/components`).
-2. **HTTP API** (`/api/v1/theme`): the same generator exposed as a `GET`/`POST` endpoint so other apps can request a pre-computed theme (hex colors, 50–950 scales, accessible contrast) and use it in their own Tailwind config.
+2. **HTTP API** (`/api/v1/theme`, `/api/v2/theme`, `/api/v2/theme-family`): the same generator exposed as `GET`/`POST` endpoints so other apps can request a pre-computed theme (hex colors, 50–950 scales, accessible contrast) or a coherent light/dark pair for tooling.
 
 The project's golden rule: **the playground and the API can never diverge**, because they literally share the same function (`generateTheme` in `src/shared/theme-generator.ts`). If something changes the generator's output, it changes for both consumers at once.
 
 ## Who it exists for
 
 - Designers/frontend teams who want a coherent palette starting point (WCAG contrast, 50–950 scales) without opening Figma.
-- Other apps/services (including `volt-ui` itself, the sibling design system by the same author) that want to request a theme over HTTP instead of reimplementing color logic.
+- Other apps/services (including `volt-ui` itself, the sibling design system by the same author) that want to request a theme over HTTP instead of reimplementing color logic. Volt-specific output is handled by an adapter/export, not by changing the generic generator.
 
 ## What it is NOT (non-goals)
 
@@ -26,9 +26,9 @@ The project's golden rule: **the playground and the API can never diverge**, bec
 
 ## Project goals (what it aims to achieve)
 
-- Any external app can request `GET /api/v1/theme?mode=dark&seed=brand-a&harmony=triadic&baseHue=220` and always get the same result for the same `seed` (deterministic generation).
+- Any external app can request `GET /api/v1/theme?mode=dark&seed=brand-a&harmony=triadic&baseHue=220` and always get the same result for the same `seed` (deterministic generation). New consumers should generally use `/api/v2/theme`; tooling that needs both modes can use `/api/v2/theme-family`.
 - The output is accessible by default: the text/background pair is adjusted until it meets contrast ≥ 4.5:1 (`ensureAccessibleForeground` in `theme-generator.ts`), and each scale ships a white/black `foreground` chosen by contrast (best-effort, see the nuance in [STATE.md](./STATE.md)).
-- The playground user can copy a Tailwind v4 `@theme { ... }` block ready to paste into their own project ("Copy Tailwind @theme" button in `export-panel.ts`).
+- The playground user can copy a Tailwind v4 `@theme { ... }` block or another supported export, including first-class Volt UI semantic CSS.
 - Simple, cheap deploys: Cloudflare Pages via Wrangler, with no server infrastructure of our own to maintain.
 
 ## Relationship with `volt-ui`

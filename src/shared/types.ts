@@ -99,10 +99,31 @@ export interface ThemeApiMeta {
   baseColor?: string;
 }
 
+export type ThemeFamilyMeta = Omit<ThemeApiMeta, "mode">;
+
+export interface ThemeFamily {
+  light: Theme;
+  dark: Theme;
+  meta: ThemeFamilyMeta;
+}
+
 export interface ThemeApiResponse {
   ok: true;
   theme: Theme;
   meta: ThemeApiMeta;
+}
+
+export type ThemeFamilyApiRequest = Omit<ThemeApiRequest, "mode">;
+
+export interface ThemeFamilyApiResponse {
+  ok: true;
+  contractVersion: 1;
+  algorithm: ThemeAlgorithm;
+  themes: {
+    light: Theme;
+    dark: Theme;
+  };
+  meta: ThemeFamilyMeta;
 }
 
 /** Machine-readable formats the palette can be exported to. */
@@ -112,11 +133,44 @@ export type ExportFormat =
   | "scss"
   | "json"
   | "shadcn"
+  | "volt"
   | "design-tokens";
 
 export interface ExportOptions {
   colorModes?: ThemeColorModes;
   enabledStatusColors?: EnabledStatusColors;
+}
+
+export type VoltSemanticTokenName =
+  | "background"
+  | "foreground"
+  | "surface"
+  | "surface-foreground"
+  | "muted"
+  | "muted-foreground"
+  | "border"
+  | "ring"
+  | "input"
+  | "primary"
+  | "primary-foreground"
+  | "secondary"
+  | "secondary-foreground"
+  | "destructive"
+  | "destructive-foreground"
+  | "success"
+  | "success-foreground"
+  | "warning"
+  | "warning-foreground"
+  | "error"
+  | "error-foreground"
+  | "info"
+  | "info-foreground";
+
+export type VoltTheme = Record<VoltSemanticTokenName, string>;
+
+export interface VoltThemeFamily {
+  light: VoltTheme;
+  dark: VoltTheme;
 }
 
 export type WcagLevel = "AAA" | "AA" | "AA Large" | "Fail";

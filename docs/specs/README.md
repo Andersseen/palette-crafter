@@ -34,4 +34,5 @@ When in doubt, write the spec — it's cheaper than a half-done change that has 
 
 ## Existing specs
 
-- `done/` — specs for features already implemented (empty for now; this system was created retroactively on a project already in motion, so work prior to that date has no written spec — see [STATE.md](../STATE.md) for a summary of what's already built).
+- `done/v2-algorithm-and-tooling.md` — v2 algorithm, exports, contrast audit, and tests.
+- `done/theme-family-volt-api.md` — ThemeFamily generation, Volt export, and `/api/v2/theme-family`.
