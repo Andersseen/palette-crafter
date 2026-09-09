@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { generateTheme, generateThemeFamily } from "./theme-generator";
 
 describe("generateThemeFamily", () => {
+  it("defaults to the current v3 algorithm", () => {
+    expect(generateThemeFamily({ seed: "family-fixture" }).meta.algorithm).toBe(
+      "v3",
+    );
+  });
+
   it("is deterministic for a seeded identity", () => {
     const options = {
       seed: "family-fixture",

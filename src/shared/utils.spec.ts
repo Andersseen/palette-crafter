@@ -9,6 +9,7 @@ import {
   hexToRgb,
   isValidHex,
   normalizeHex,
+  oklabDistance,
   oklchToHex,
 } from "./utils";
 
@@ -75,6 +76,18 @@ describe("OKLCH conversion", () => {
     ]) {
       expect(oklchToHex(color)).toMatch(/^#[0-9a-f]{6}$/);
     }
+  });
+});
+
+describe("oklabDistance", () => {
+  it("measures perceptual distance symmetrically", () => {
+    expect(oklabDistance("#3b82f6", "#3b82f6")).toBe(0);
+    expect(oklabDistance("#3b82f6", "#10b981")).toBeCloseTo(
+      oklabDistance("#10b981", "#3b82f6"),
+    );
+    expect(oklabDistance("#3b82f6", "#10b981")).toBeGreaterThan(
+      oklabDistance("#3b82f6", "#2563eb"),
+    );
   });
 });
 

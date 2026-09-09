@@ -32,8 +32,8 @@ describe("initial state", () => {
     expect(service.isLoading()).toBe(false);
   });
 
-  it("uses the v2 algorithm", () => {
-    expect(create().meta()!.algorithm).toBe("v2");
+  it("uses the v3 algorithm", () => {
+    expect(create().meta()!.algorithm).toBe("v3");
   });
 });
 
@@ -188,6 +188,18 @@ describe("persistence and permalink", () => {
     TestBed.resetTestingModule();
 
     expect(create().theme()).toEqual(expected);
+  });
+
+  it("preserves an explicit v2 permalink instead of upgrading it on load", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?seed=legacy&mode=light&algorithm=v2",
+    );
+
+    const service = create();
+
+    expect(service.meta()!.algorithm).toBe("v2");
   });
 
   it("recovers from corrupted cached data", () => {

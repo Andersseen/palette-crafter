@@ -15,7 +15,7 @@
 
 `GET/POST /api/v1/theme` with the same `seed` **must** always return the same result (it's documented in the README as a feature). If you change `normalizeSeed`, `mulberry32`, the order in which `random()` is consumed, or the hue/lightness/saturation values hardcoded in the v1 path, **every seed already in use in production changes its output without warning**.
 
-**The mechanism for changing the algorithm is versioning, not editing.** `generateTheme` takes `algorithm: "v1" | "v2"` and defaults to `v1`. To change generation behavior, add a version — do not modify an existing one. `/api/v1/theme` defaults to `v1`, `/api/v2/theme` to `v2`.
+**The mechanism for changing the algorithm is versioning, not editing.** `generateTheme` takes `algorithm: "v1" | "v2" | "v3"` and defaults to `v1`. To change generation behavior, add a version — do not modify an existing one. `/api/v1/theme` defaults to `v1`, `/api/v2/theme` to frozen `v2`, and `/api/v3/theme` to current `v3`.
 
 Two traps worth naming, both of which were hit while building v2:
 
@@ -66,7 +66,7 @@ It's the component library by the same author, developed in the sibling repo `vo
 
 ## 7. Testing works; linting still does not exist
 
-`pnpm test` runs 136 Vitest tests (`pnpm test:watch` for the watcher). Add tests for anything you change in `src/shared/` — it is pure logic with no setup cost, and it is what the API contract rests on.
+`pnpm test` runs 150 Vitest tests (`pnpm test:watch` for the watcher). Add tests for anything you change in `src/shared/` — it is pure logic with no setup cost, and it is what the API contract rests on.
 
 There is still **no linter or formatter configured** (no `eslint.config.*`, no `.prettierrc`). Don't assume `pnpm lint` exists. The surrounding code style is the only contract.
 

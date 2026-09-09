@@ -111,6 +111,17 @@ export const hexToOklab = (hex: string): OklabColor => {
   };
 };
 
+/** Perceptual distance in OKLab space. Useful for palette collision checks. */
+export const oklabDistance = (a: string, b: string): number => {
+  const first = hexToOklab(a);
+  const second = hexToOklab(b);
+  const dl = first.l - second.l;
+  const da = first.a - second.a;
+  const db = first.b - second.b;
+
+  return Math.sqrt(dl * dl + da * da + db * db);
+};
+
 /**
  * Converts Oklab to linear sRGB. Channels may fall outside [0, 1] when the
  * color is outside the sRGB gamut — callers are expected to gamut-map first.

@@ -19,6 +19,7 @@ import type {
   OklabColor,
   StatusColorName,
   Theme,
+  ThemeAlgorithm,
   ThemeApiMeta,
   ThemeApiRequest,
   ThemeApiResponse,
@@ -46,6 +47,7 @@ const COLOR_SCALE_SHADES = [
 
 /** Seed behind the palette a first-time visitor lands on. */
 const HOME_SEED = "palette-crafter-home";
+const CURRENT_ALGORITHM: ThemeAlgorithm = "v3";
 
 const STORAGE_KEY = "palette-crafter:last-theme";
 
@@ -57,7 +59,7 @@ export default class ColorPalette {
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   private currentTheme = signal<Theme>(
-    generateTheme({ seed: HOME_SEED, mode: "light", algorithm: "v2" }).theme,
+    generateTheme({ seed: HOME_SEED, mode: "light", algorithm: CURRENT_ALGORITHM }).theme,
   );
   private currentMeta = signal<ThemeApiMeta | null>(null);
   private themeMode = signal<ThemeMode>("light");
@@ -128,10 +130,11 @@ export default class ColorPalette {
     // Seeding synchronously — on the server as well as the browser — is what
     // removes the flash of default colors: the first paint already carries the
     // real palette instead of waiting for a round-trip after hydration.
+    const initial = this.initialRequest();
     this.applyResult(
       generateTheme({
-        ...this.initialRequest(),
-        algorithm: "v2",
+        ...initial,
+        algorithm: initial.algorithm ?? CURRENT_ALGORITHM,
       }),
     );
 
@@ -188,6 +191,7 @@ export default class ColorPalette {
     const harmony = params.get("harmony");
     const baseHue = params.get("baseHue");
     const baseColor = params.get("baseColor");
+    const algorithm = params.get("algorithm");
     const seed = params.get("seed");
 
     const request: ThemeApiRequest = {};
@@ -203,6 +207,9 @@ export default class ColorPalette {
     }
     if (baseHue !== null && Number.isFinite(Number(baseHue))) {
       request.baseHue = Number(baseHue);
+    }
+    if (algorithm === "v1" || algorithm === "v2" || algorithm === "v3") {
+      request.algorithm = algorithm;
     }
     if (seed !== null) {
       request.seed = seed;
@@ -232,11 +239,12 @@ export default class ColorPalette {
       ...(this.brandColor() ? { baseColor: this.brandColor()! } : {}),
       ...params,
     };
+    const algorithm = params.algorithm ?? this.currentMeta()?.algorithm ?? CURRENT_ALGORITHM;
 
     try {
       const result = this.themeApi.isRemoteConfigured
-        ? await this.themeApi.getTheme({ ...request, algorithm: "v2" })
-        : generateTheme({ ...request, algorithm: "v2" });
+        ? await this.themeApi.getTheme({ ...request, algorithm })
+        : generateTheme({ ...request, algorithm });
 
       return { theme: this.withLockedTokens(result.theme), meta: result.meta };
     } catch (error) {
@@ -358,7 +366,7 @@ export default class ColorPalette {
     }
 
     this.brandColor.set(normalized);
-    return this.generatePalette({ baseColor: normalized });
+    return this.generatePalette({ baseColor: normalized, algorithm: CURRENT_ALGORITHM });
   }
 
   setLocked(token: BrandToken, isLocked: boolean): void {

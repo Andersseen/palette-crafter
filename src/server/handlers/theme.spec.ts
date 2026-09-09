@@ -37,7 +37,9 @@ vi.mock("h3", () => ({
 const event = {} as H3Event;
 const v1 = createThemeHandler("v1");
 const v2 = createThemeHandler("v2");
+const v3 = createThemeHandler("v3");
 const familyV2 = createThemeFamilyHandler("v2");
+const familyV3 = createThemeFamilyHandler("v3");
 type TestHandler = (event: H3Event) => Promise<unknown>;
 
 const call = (
@@ -145,7 +147,7 @@ describe("theme handler validation", () => {
   it("rejects invalid mode, harmony and algorithm", async () => {
     await expectStatus(call(v1, { query: { mode: "sepia" } }), 400);
     await expectStatus(call(v1, { query: { harmony: "tetradic" } }), 400);
-    await expectStatus(call(v1, { query: { algorithm: "v3" } }), 400);
+    await expectStatus(call(v1, { query: { algorithm: "v4" } }), 400);
   });
 
   it("rejects an oversized seed", async () => {
@@ -180,9 +182,13 @@ describe("theme handler output", () => {
     const second = (await call(v2, { query: { seed: "a" } })) as {
       meta: { algorithm: string };
     };
+    const third = (await call(v3, { query: { seed: "a" } })) as {
+      meta: { algorithm: string };
+    };
 
     expect(first.meta.algorithm).toBe("v1");
     expect(second.meta.algorithm).toBe("v2");
+    expect(third.meta.algorithm).toBe("v3");
   });
 
   it("lets the algorithm parameter override the route default", async () => {
@@ -193,12 +199,18 @@ describe("theme handler output", () => {
     expect(result.meta.algorithm).toBe("v2");
   });
 
-  it("builds the primary scale from a supplied brand color on v2", async () => {
+  it("builds the primary scale from a supplied brand color on v2 and v3", async () => {
     const result = (await call(v2, { query: { baseColor: "#ff6b35" } })) as {
+      theme: { primary: { DEFAULT: string } };
+    };
+    const v3Result = (await call(v3, {
+      query: { baseColor: "#ff6b35" },
+    })) as {
       theme: { primary: { DEFAULT: string } };
     };
 
     expect(result.theme.primary.DEFAULT).toBe("#ff6b35");
+    expect(v3Result.theme.primary.DEFAULT).toBe("#ff6b35");
   });
 
   it("returns a rendered export when format is given", async () => {
@@ -255,6 +267,15 @@ describe("theme family handler", () => {
       baseColor: "#ff6b35",
       harmony: "triadic",
     });
+  });
+
+  it("defaults the v3 family route to the v3 algorithm", async () => {
+    const result = (await call(familyV3, {
+      query: { seed: "brand-a" },
+    })) as { algorithm: string; meta: { algorithm: string } };
+
+    expect(result.algorithm).toBe("v3");
+    expect(result.meta.algorithm).toBe("v3");
   });
 
   it("accepts POST body parameters", async () => {
