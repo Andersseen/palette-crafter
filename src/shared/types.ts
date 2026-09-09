@@ -45,11 +45,13 @@ export interface ColorSwatchType {
   hex: string;
   hsl: string;
   oklab: string;
+  rgb: string;
   cssVar: string;
 }
 
 export type ThemeMode = "light" | "dark";
 export type ColorTokenMode = "single" | "scale";
+export type ColorValueFormat = "hex" | "rgb" | "oklab";
 export type StatusColorName = "info" | "success" | "warning" | "danger";
 
 export type StatusColorScales = Record<StatusColorName, ColorScale>;
@@ -70,8 +72,9 @@ export type HarmonyType =
  *   wild depends on its exact output (see docs/CONVENTIONS.md #2).
  * - `v2` — OKLCH perceptual scales, input lightness preserved, `baseColor`
  *   support, AAA-targeted body text.
+ * - `v3` — v2 brand/body behavior with bounded adaptive semantic status colors.
  */
-export type ThemeAlgorithm = "v1" | "v2";
+export type ThemeAlgorithm = "v1" | "v2" | "v3";
 
 /** Which brand tokens to keep untouched when regenerating. */
 export type BrandToken = "primary" | "secondary";
@@ -82,7 +85,7 @@ export interface ThemeApiRequest {
   seed?: number | string;
   baseHue?: number;
   harmony?: HarmonyType;
-  /** v2 only: exact brand color to build the primary scale from. */
+  /** v2/v3 only: exact brand color to build the primary scale from. */
   baseColor?: string;
   algorithm?: ThemeAlgorithm;
 }
@@ -180,6 +183,7 @@ export interface ContrastSuggestion {
   shade: string;
   hex: string;
   ratio: number;
+  alpha?: number;
 }
 
 export interface ContrastCheck {

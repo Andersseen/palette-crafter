@@ -8,8 +8,8 @@ import { normalizeHex } from "@shared/utils";
  * Lets the user start from their own brand color instead of a hue number.
  *
  * This is the input most people actually arrive with — nobody knows their brand
- * is "hue 217", they know it is #FF6B35 — and v2 places that exact hex in the
- * generated scale rather than approximating it.
+ * is "hue 217", they know it is #FF6B35 — and the current algorithm places
+ * that exact hex in the generated scale rather than approximating it.
  */
 @Component({
   selector: "app-brand-color-input",

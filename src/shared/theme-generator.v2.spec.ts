@@ -170,4 +170,47 @@ describe("v2 algorithm", () => {
     );
     expect(generateTheme({ algorithm: "v2" }).meta.seed).toBeUndefined();
   });
+
+  it("keeps representative v2 colors byte-for-byte stable", () => {
+    const light = generateTheme({
+      seed: "brand-a",
+      mode: "light",
+      harmony: "triadic",
+      baseHue: 220,
+      algorithm: "v2",
+    });
+    expect(light.theme.bg).toBe("#f7fbfc");
+    expect(light.theme.fg).toBe("#0e1b1f");
+    expect(light.theme.primary.DEFAULT).toBe("#00758e");
+    expect(light.theme.secondary.DEFAULT).toBe("#a5458a");
+    expect(light.theme.status?.info.DEFAULT).toBe("#0c68c2");
+    expect(light.theme.status?.success.DEFAULT).toBe("#007f38");
+    expect(light.theme.status?.warning.DEFAULT).toBe("#896100");
+    expect(light.theme.status?.danger.DEFAULT).toBe("#be2323");
+
+    const dark = generateTheme({
+      seed: "brand-a",
+      mode: "dark",
+      harmony: "triadic",
+      baseHue: 220,
+      algorithm: "v2",
+    });
+    expect(dark.theme.bg).toBe("#081215");
+    expect(dark.theme.fg).toBe("#ebf3f6");
+    expect(dark.theme.primary.DEFAULT).toBe("#00b7dd");
+    expect(dark.theme.secondary.DEFAULT).toBe("#e189c5");
+    expect(dark.theme.status?.info.DEFAULT).toBe("#5da7ff");
+    expect(dark.theme.status?.success.DEFAULT).toBe("#53be70");
+    expect(dark.theme.status?.warning.DEFAULT).toBe("#d59800");
+    expect(dark.theme.status?.danger.DEFAULT).toBe("#ff7266");
+
+    const brand = generateTheme({
+      baseColor: "#ff6b35",
+      mode: "light",
+      harmony: "complementary",
+      algorithm: "v2",
+    });
+    expect(brand.theme.primary.DEFAULT).toBe("#ff6b35");
+    expect(brand.theme.secondary.DEFAULT).toBe("#007b95");
+  });
 });

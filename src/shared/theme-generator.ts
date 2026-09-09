@@ -7,11 +7,13 @@ import {
   hexToOklch,
   hslToHex,
   normalizeHex,
+  oklabDistance,
   oklchToHex,
 } from "./utils";
 import type {
   ColorScale,
   HarmonyType,
+  OklchColor,
   Theme,
   ThemeAlgorithm,
   ThemeFamily,
@@ -25,7 +27,7 @@ export interface ThemeGenerationOptions {
   baseHue?: number;
   harmony?: HarmonyType;
   /**
-   * Exact brand color to build the primary scale from (v2 only).
+   * Exact brand color to build the primary scale from (v2/v3 only).
    * Takes precedence over `baseHue`, which is then derived from it.
    */
   baseColor?: string;
@@ -118,7 +120,7 @@ const resolveThemeIdentity = (
     : Math.random;
 
   const baseColor =
-    algorithm === "v2" && options.baseColor
+    (algorithm === "v2" || algorithm === "v3") && options.baseColor
       ? (normalizeHex(options.baseColor) ?? undefined)
       : undefined;
 
@@ -282,6 +284,251 @@ const V2_STATUS_HUES = {
   danger: 27,
 } as const;
 
+type SemanticColorName = keyof typeof V2_STATUS_HUES;
+
+interface SemanticColorRecipe {
+  anchorHue: number;
+  minHue: number;
+  maxHue: number;
+  baseChroma: number;
+  minChroma: number;
+  maxChroma: number;
+  maxHueBias: number;
+  collisionStep: number;
+  escapeDirection: -1 | 1;
+}
+
+/**
+ * v3 keeps canonical semantic anchors, then permits bounded movement inside
+ * recognizable OKLCH neighborhoods. Chroma adapts more than hue so the colors
+ * feel related to the brand without changing meaning.
+ */
+const V3_SEMANTIC_RECIPES: Record<SemanticColorName, SemanticColorRecipe> = {
+  info: {
+    anchorHue: V2_STATUS_HUES.info,
+    minHue: 210,
+    maxHue: 285,
+    baseChroma: 0.16,
+    minChroma: 0.1,
+    maxChroma: 0.21,
+    maxHueBias: 26,
+    collisionStep: 8,
+    escapeDirection: 1,
+  },
+  success: {
+    anchorHue: V2_STATUS_HUES.success,
+    minHue: 135,
+    maxHue: 175,
+    baseChroma: 0.15,
+    minChroma: 0.09,
+    maxChroma: 0.19,
+    maxHueBias: 18,
+    collisionStep: 7,
+    escapeDirection: 1,
+  },
+  warning: {
+    anchorHue: V2_STATUS_HUES.warning,
+    minHue: 55,
+    maxHue: 98,
+    baseChroma: 0.16,
+    minChroma: 0.1,
+    maxChroma: 0.2,
+    maxHueBias: 15,
+    collisionStep: 7,
+    escapeDirection: -1,
+  },
+  danger: {
+    anchorHue: V2_STATUS_HUES.danger,
+    minHue: 350,
+    maxHue: 42,
+    baseChroma: 0.19,
+    minChroma: 0.12,
+    maxChroma: 0.23,
+    maxHueBias: 18,
+    collisionStep: 8,
+    escapeDirection: -1,
+  },
+};
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
+
+const hueDistance = (a: number, b: number): number => {
+  const delta = Math.abs(((a - b + 180) % 360) - 180);
+  return Number.isFinite(delta) ? delta : 0;
+};
+
+const signedHueDelta = (from: number, to: number): number => {
+  const delta = ((to - from + 540) % 360) - 180;
+  return Number.isFinite(delta) ? delta : 0;
+};
+
+const isHueInRange = (
+  hue: number,
+  minHue: number,
+  maxHue: number,
+): boolean => {
+  const h = clampHue(hue);
+  const min = clampHue(minHue);
+  const max = clampHue(maxHue);
+
+  return min <= max ? h >= min && h <= max : h >= min || h <= max;
+};
+
+const clampHueToRange = (
+  hue: number,
+  recipe: Pick<SemanticColorRecipe, "minHue" | "maxHue">,
+): number => {
+  const h = clampHue(hue);
+
+  if (isHueInRange(h, recipe.minHue, recipe.maxHue)) {
+    return h;
+  }
+
+  return hueDistance(h, recipe.minHue) <= hueDistance(h, recipe.maxHue)
+    ? clampHue(recipe.minHue)
+    : clampHue(recipe.maxHue);
+};
+
+const moveHueWithinRange = (
+  hue: number,
+  delta: number,
+  recipe: SemanticColorRecipe,
+): number => clampHueToRange(hue + delta, recipe);
+
+const semanticBaseColor = (
+  mode: ThemeMode,
+  color: Pick<OklchColor, "c" | "h">,
+): string => oklchToHex({ l: V2_BASE[mode].statusL, c: color.c, h: color.h });
+
+const minDistanceTo = (hex: string, others: string[]): number =>
+  others.reduce(
+    (closest, other) => Math.min(closest, oklabDistance(hex, other)),
+    Number.POSITIVE_INFINITY,
+  );
+
+const generateV3StatusScale = (
+  mode: ThemeMode,
+  recipe: SemanticColorRecipe,
+  primary: OklchColor,
+  secondary: OklchColor,
+  primaryBase: string,
+  secondaryBase: string,
+  existing: string[],
+): ColorScale => {
+  const weightedHueBias =
+    clamp(
+      signedHueDelta(recipe.anchorHue, primary.h),
+      -recipe.maxHueBias,
+      recipe.maxHueBias,
+    ) *
+      0.65 +
+    clamp(
+      signedHueDelta(recipe.anchorHue, secondary.h),
+      -recipe.maxHueBias,
+      recipe.maxHueBias,
+    ) *
+      0.35;
+  const brandChroma = primary.c * 0.8 + secondary.c * 0.2;
+  const chromaBias = clamp((brandChroma - 0.13) / 0.08, -1, 1) * 0.055;
+  const c = clamp(
+    recipe.baseChroma + chromaBias,
+    recipe.minChroma,
+    recipe.maxChroma,
+  );
+
+  let h = clampHueToRange(recipe.anchorHue + weightedHueBias, recipe);
+  let hex = semanticBaseColor(mode, { c, h });
+  const collisions = [
+    primaryBase,
+    secondaryBase,
+    semanticBaseColor(mode, {
+      c: primary.c,
+      h: primary.h,
+    }),
+    semanticBaseColor(mode, {
+      c: secondary.c,
+      h: secondary.h,
+    }),
+    ...existing,
+  ];
+
+  for (let i = 0; i < 16; i += 1) {
+    const conflict = collisions.find(
+      (color) => oklabDistance(hex, color) < 0.06,
+    );
+
+    if (!conflict) {
+      break;
+    }
+
+    const conflictHue = hexToOklch(conflict).h;
+    const away =
+      signedHueDelta(conflictHue, h) === 0
+        ? recipe.escapeDirection
+        : signedHueDelta(conflictHue, h) > 0
+          ? 1
+          : -1;
+    const candidates = [
+      h,
+      moveHueWithinRange(h, away * recipe.collisionStep, recipe),
+      moveHueWithinRange(h, -away * recipe.collisionStep, recipe),
+      clampHue(recipe.minHue),
+      clampHue(recipe.maxHue),
+    ];
+
+    h = candidates.reduce((best, candidate) => {
+      const bestHex = semanticBaseColor(mode, {
+        c,
+        h: best,
+      });
+      const candidateHex = semanticBaseColor(mode, {
+        c,
+        h: candidate,
+      });
+
+      return minDistanceTo(candidateHex, collisions) >
+        minDistanceTo(bestHex, collisions)
+        ? candidate
+        : best;
+    });
+    hex = semanticBaseColor(mode, { c, h });
+  }
+
+  return generateColorScaleV2(hex);
+};
+
+const generateV3StatusScales = (
+  mode: ThemeMode,
+  primaryBase: string,
+  secondaryBase: string,
+): Theme["status"] => {
+  const primary = hexToOklch(primaryBase);
+  const secondary = hexToOklch(secondaryBase);
+  const existing: string[] = [];
+  const status = {} as NonNullable<Theme["status"]>;
+
+  for (const name of [
+    "info",
+    "success",
+    "warning",
+    "danger",
+  ] as SemanticColorName[]) {
+    status[name] = generateV3StatusScale(
+      mode,
+      V3_SEMANTIC_RECIPES[name],
+      primary,
+      secondary,
+      primaryBase,
+      secondaryBase,
+      existing,
+    );
+    existing.push(status[name].DEFAULT);
+  }
+
+  return status;
+};
+
 const generateV2Theme = (
   mode: ThemeMode,
   baseHue: number,
@@ -317,6 +564,33 @@ const generateV2Theme = (
   };
 };
 
+const generateV3Theme = (
+  mode: ThemeMode,
+  baseHue: number,
+  secondaryHue: number,
+  baseColor?: string,
+): Theme => {
+  const palette = V2_BASE[mode];
+
+  const bgColor = oklchToHex({ ...palette.bg, h: baseHue });
+  const fgColor = ensureAccessibleForegroundV2(
+    bgColor,
+    oklchToHex({ ...palette.fg, h: baseHue }),
+  );
+
+  const primaryBase =
+    baseColor ?? oklchToHex({ ...palette.primary, h: baseHue });
+  const secondaryBase = oklchToHex({ ...palette.secondary, h: secondaryHue });
+
+  return {
+    bg: bgColor,
+    fg: fgColor,
+    primary: generateColorScaleV2(primaryBase),
+    secondary: generateColorScaleV2(secondaryBase),
+    status: generateV3StatusScales(mode, primaryBase, secondaryBase),
+  };
+};
+
 export const generateTheme = (
   options: ThemeGenerationOptions = {},
 ): ThemeGenerationResult => {
@@ -324,14 +598,21 @@ export const generateTheme = (
   const identity = resolveThemeIdentity(options);
 
   const theme =
-    identity.algorithm === "v2"
-      ? generateV2Theme(
+    identity.algorithm === "v3"
+      ? generateV3Theme(
           mode,
           identity.baseHue,
           identity.secondaryHue,
           identity.baseColor,
         )
-      : generateV1Theme(mode, identity.baseHue, identity.secondaryHue);
+      : identity.algorithm === "v2"
+        ? generateV2Theme(
+            mode,
+            identity.baseHue,
+            identity.secondaryHue,
+            identity.baseColor,
+          )
+        : generateV1Theme(mode, identity.baseHue, identity.secondaryHue);
 
   return {
     theme,
@@ -347,18 +628,25 @@ export const generateThemeFamily = (
 ): ThemeFamily => {
   const identity = resolveThemeIdentity({
     ...options,
-    algorithm: options.algorithm ?? "v2",
+    algorithm: options.algorithm ?? "v3",
   });
 
   const buildTheme = (mode: ThemeMode): Theme =>
-    identity.algorithm === "v2"
-      ? generateV2Theme(
+    identity.algorithm === "v3"
+      ? generateV3Theme(
           mode,
           identity.baseHue,
           identity.secondaryHue,
           identity.baseColor,
         )
-      : generateV1Theme(mode, identity.baseHue, identity.secondaryHue);
+      : identity.algorithm === "v2"
+        ? generateV2Theme(
+            mode,
+            identity.baseHue,
+            identity.secondaryHue,
+            identity.baseColor,
+          )
+        : generateV1Theme(mode, identity.baseHue, identity.secondaryHue);
 
   return {
     light: buildTheme("light"),

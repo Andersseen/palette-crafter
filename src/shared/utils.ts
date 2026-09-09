@@ -1,4 +1,10 @@
-import type { ColorScale, HSLColor, OklabColor, OklchColor } from "./types";
+import type {
+  ColorScale,
+  ColorValueFormat,
+  HSLColor,
+  OklabColor,
+  OklchColor,
+} from "./types";
 
 export const hexToRgb = (hex: string) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -109,6 +115,36 @@ export const hexToOklab = (hex: string): OklabColor => {
     a: 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
     b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
   };
+};
+
+/** Perceptual distance in OKLab space. Useful for palette collision checks. */
+export const oklabDistance = (a: string, b: string): number => {
+  const first = hexToOklab(a);
+  const second = hexToOklab(b);
+  const dl = first.l - second.l;
+  const da = first.a - second.a;
+  const db = first.b - second.b;
+
+  return Math.sqrt(dl * dl + da * da + db * db);
+};
+
+export const formatColorValue = (
+  hex: string,
+  format: ColorValueFormat,
+): string => {
+  switch (format) {
+    case "rgb":
+      return `rgb(${hexToRgb(hex)})`;
+    case "oklab": {
+      const oklab = hexToOklab(hex);
+      return `oklab(${oklab.l.toFixed(3)} ${oklab.a.toFixed(
+        3,
+      )} ${oklab.b.toFixed(3)})`;
+    }
+    case "hex":
+    default:
+      return hex.toUpperCase();
+  }
 };
 
 /**

@@ -115,4 +115,20 @@ describe("buildContrastReport", () => {
       }
     }
   });
+
+  it("suggests the minimum stronger border opacity when the rendered border fails", () => {
+    const { theme } = generateTheme({ seed: "a", algorithm: "v3" });
+    const report = buildContrastReport(theme);
+    const border = report.checks.find((entry) => entry.label === "Border")!;
+
+    expect(border.passes).toBe(false);
+    expect(border.suggestion?.alpha).toBeGreaterThan(0.2);
+    expect(border.suggestion?.ratio).toBeGreaterThanOrEqual(3);
+
+    const repaired = buildContrastReport(theme, undefined, {
+      borderAlpha: border.suggestion!.alpha,
+    }).checks.find((entry) => entry.label === "Border")!;
+
+    expect(repaired.passes).toBe(true);
+  });
 });

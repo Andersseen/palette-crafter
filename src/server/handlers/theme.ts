@@ -49,7 +49,7 @@ const isHarmony = (value: unknown): value is HarmonyType =>
   typeof value === "string" && HARMONIES.includes(value as HarmonyType);
 
 const isAlgorithm = (value: unknown): value is ThemeAlgorithm =>
-  value === "v1" || value === "v2";
+  value === "v1" || value === "v2" || value === "v3";
 
 const badRequest = (statusMessage: string) =>
   createError({ statusCode: 400, statusMessage });
@@ -76,7 +76,7 @@ const normalizePayload = (
   }
 
   if (payload.algorithm !== undefined && !isAlgorithm(payload.algorithm)) {
-    throw badRequest('Invalid algorithm. Use "v1" or "v2".');
+    throw badRequest('Invalid algorithm. Use "v1", "v2", or "v3".');
   }
 
   const algorithm = payload.algorithm ?? defaultAlgorithm;
@@ -109,11 +109,11 @@ const normalizePayload = (
     if (!normalized) {
       throw badRequest("Invalid baseColor. Use a hex color such as #3b82f6.");
     }
-    if (algorithm !== "v2") {
+    if (algorithm !== "v2" && algorithm !== "v3") {
       // Silently ignoring it would hand back a palette built on a different
       // color than the caller asked for.
       throw badRequest(
-        "baseColor requires algorithm v2. Call /api/v2/theme or pass algorithm=v2.",
+        "baseColor requires algorithm v2 or v3. Call /api/v3/theme or pass algorithm=v3.",
       );
     }
 

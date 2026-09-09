@@ -48,7 +48,7 @@ export default class ThemeApiClient {
   }
 
   private endpoint(): string {
-    return `${this.baseUrl}/api/v2/theme`;
+    return `${this.baseUrl}/api/v3/theme`;
   }
 
   private async request(url: string): Promise<ThemeApiResponse> {

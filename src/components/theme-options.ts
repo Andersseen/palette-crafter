@@ -14,7 +14,11 @@ import {
 } from "@voltui/components";
 import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
-import type { ColorTokenMode, StatusColorName } from "@shared/types";
+import type {
+  ColorTokenMode,
+  ColorValueFormat,
+  StatusColorName,
+} from "@shared/types";
 
 @Component({
   selector: "app-theme-options",
@@ -114,6 +118,36 @@ import type { ColorTokenMode, StatusColorName } from "@shared/types";
 
             <section class="space-y-4">
               <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Color Codes
+              </h3>
+
+              <div
+                class="grid grid-cols-[1fr_auto] items-center gap-4 rounded-lg border border-border px-3 py-3"
+              >
+                <span class="text-sm font-medium text-foreground">Display</span>
+
+                <volt-toggle-group
+                  type="single"
+                  [value]="[colorFormat()]"
+                  (valueChange)="onColorFormat($event)"
+                >
+                  <volt-toggle-group-item value="hex" size="sm">
+                    HEX
+                  </volt-toggle-group-item>
+                  <volt-toggle-group-item value="rgb" size="sm">
+                    RGB
+                  </volt-toggle-group-item>
+                  <volt-toggle-group-item value="oklab" size="sm">
+                    OKLab
+                  </volt-toggle-group-item>
+                </volt-toggle-group>
+              </div>
+            </section>
+
+            <volt-separator />
+
+            <section class="space-y-4">
+              <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Status Colors
               </h3>
 
@@ -146,6 +180,7 @@ export default class ThemeOptions {
   readonly statusTokens = ["info", "success", "warning", "danger"] as const;
 
   colorModes = computed(() => this.colorService.selectedColorModes());
+  colorFormat = computed(() => this.colorService.selectedColorValueFormat());
   enabledStatusColors = computed(() => this.colorService.enabledStatusColors());
 
   /**
@@ -153,11 +188,23 @@ export default class ThemeOptions {
    * an empty one when the active item is deselected — which we ignore so a
    * token always has a mode.
    */
-  onColorMode(token: "primary" | "secondary", value: string[]): void {
-    const mode = value[0] as ColorTokenMode | undefined;
+  private firstValue(value: string | string[]): string | undefined {
+    return Array.isArray(value) ? value[0] : value;
+  }
+
+  onColorMode(token: "primary" | "secondary", value: string | string[]): void {
+    const mode = this.firstValue(value) as ColorTokenMode | undefined;
 
     if (mode) {
       this.colorService.setColorTokenMode(token, mode);
+    }
+  }
+
+  onColorFormat(value: string | string[]): void {
+    const format = this.firstValue(value) as ColorValueFormat | undefined;
+
+    if (format) {
+      this.colorService.setColorValueFormat(format);
     }
   }
 

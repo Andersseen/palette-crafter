@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   bestForeground,
   calculateContrast,
+  formatColorValue,
   generateColorScale,
   generateColorScaleV2,
   hexToOklch,
   hexToRgb,
   isValidHex,
   normalizeHex,
+  oklabDistance,
   oklchToHex,
 } from "./utils";
 
@@ -38,6 +40,16 @@ describe("hexToRgb", () => {
     expect(hexToRgb("#3b82f6")).toBe("59 130 246");
     expect(hexToRgb("#000000")).toBe("0 0 0");
     expect(hexToRgb("#ffffff")).toBe("255 255 255");
+  });
+});
+
+describe("formatColorValue", () => {
+  it("formats color labels as hex, rgb, or OKLab", () => {
+    expect(formatColorValue("#3b82f6", "hex")).toBe("#3B82F6");
+    expect(formatColorValue("#3b82f6", "rgb")).toBe("rgb(59 130 246)");
+    expect(formatColorValue("#3b82f6", "oklab")).toMatch(
+      /^oklab\(0\.\d{3} -?0\.\d{3} -?0\.\d{3}\)$/,
+    );
   });
 });
 
@@ -75,6 +87,18 @@ describe("OKLCH conversion", () => {
     ]) {
       expect(oklchToHex(color)).toMatch(/^#[0-9a-f]{6}$/);
     }
+  });
+});
+
+describe("oklabDistance", () => {
+  it("measures perceptual distance symmetrically", () => {
+    expect(oklabDistance("#3b82f6", "#3b82f6")).toBe(0);
+    expect(oklabDistance("#3b82f6", "#10b981")).toBeCloseTo(
+      oklabDistance("#10b981", "#3b82f6"),
+    );
+    expect(oklabDistance("#3b82f6", "#10b981")).toBeGreaterThan(
+      oklabDistance("#3b82f6", "#2563eb"),
+    );
   });
 });
 

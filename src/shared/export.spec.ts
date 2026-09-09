@@ -14,7 +14,7 @@ const build = (overrides: Partial<ExportContext> = {}): ExportContext => {
   const { theme, meta } = generateTheme({
     seed: "export-fixture",
     mode: "light",
-    algorithm: "v2",
+    algorithm: "v3",
   });
 
   return { theme, meta, ...overrides };
