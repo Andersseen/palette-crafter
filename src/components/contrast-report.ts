@@ -1,5 +1,5 @@
 import { Component, computed, inject } from "@angular/core";
-import { VoltBadge } from "@voltui/components";
+import { VoltBadge, VoltButton } from "@voltui/components";
 import { MOVEMENT_DIRECTIVES } from "angular-movement";
 import ColorPalette from "@services/color-palette";
 import type { WcagLevel } from "@shared/types";
@@ -12,7 +12,7 @@ import type { WcagLevel } from "@shared/types";
  */
 @Component({
   selector: "app-contrast-report",
-  imports: [VoltBadge, ...MOVEMENT_DIRECTIVES],
+  imports: [VoltBadge, VoltButton, ...MOVEMENT_DIRECTIVES],
   template: `
     <div class="space-y-3 sm:space-y-4">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -20,9 +20,23 @@ import type { WcagLevel } from "@shared/types";
           Measured on the pairs the theme actually renders, with transparent
           tokens composited at their real opacity.
         </p>
-        <p class="font-mono text-xs tabular-nums opacity-70">
-          {{ report().passing }}/{{ report().checks.length }} pass AA
-        </p>
+        <div class="flex items-center gap-2">
+          <p class="font-mono text-xs tabular-nums opacity-70">
+            {{ report().passing }}/{{ report().checks.length }} pass AA
+          </p>
+
+          @if (report().failing > 0) {
+            <volt-button
+              size="sm"
+              variant="outline"
+              [disabled]="repairableFailures() === 0"
+              [moveWhileTap]="{ scale: [1, 0.95] }"
+              (click)="repair()"
+            >
+              Fix a11y
+            </volt-button>
+          }
+        </div>
       </div>
 
       <ul class="grid gap-2 sm:grid-cols-2" [moveStagger]="40">
@@ -46,10 +60,17 @@ import type { WcagLevel } from "@shared/types";
               <div class="min-w-0">
                 <p class="truncate text-sm font-medium">{{ check.label }}</p>
                 @if (check.suggestion; as suggestion) {
-                  <p class="truncate text-xs opacity-70">
-                    Use shade {{ suggestion.shade }} ({{ suggestion.hex }}) for
-                    text — {{ suggestion.ratio }}:1
-                  </p>
+                  @if (suggestion.alpha !== undefined) {
+                    <p class="truncate text-xs opacity-70">
+                      Use {{ suggestion.alpha * 100 }}% opacity —
+                      {{ suggestion.ratio }}:1
+                    </p>
+                  } @else {
+                    <p class="truncate text-xs opacity-70">
+                      Use shade {{ suggestion.shade }} ({{ suggestion.hex }}) for
+                      text — {{ suggestion.ratio }}:1
+                    </p>
+                  }
                 } @else if (!check.bodyText) {
                   <p class="truncate text-xs opacity-60">
                     Non-text element · needs 3:1
@@ -76,6 +97,15 @@ export default class ContrastReport {
   private readonly colorService = inject(ColorPalette);
 
   report = computed(() => this.colorService.contrastReport());
+  repairableFailures = computed(
+    () =>
+      this.report().checks.filter((check) => !check.passes && check.suggestion)
+        .length,
+  );
+
+  repair(): void {
+    this.colorService.repairAccessibilityFailures();
+  }
 
   /**
    * Volt badges only offer four variants, so "AA Large" (a partial pass) has

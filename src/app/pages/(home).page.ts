@@ -92,7 +92,11 @@ type Panel = (typeof PANELS)[number];
               </h2>
               <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
                 @for (swatch of baseSwatches(); track swatch.cssVar) {
-                  <app-color-swatch [swatch]="swatch" layout="row" />
+                  <app-color-swatch
+                    [swatch]="swatch"
+                    [format]="colorFormat()"
+                    layout="row"
+                  />
                 }
               </div>
             </section>
@@ -105,7 +109,11 @@ type Panel = (typeof PANELS)[number];
               </h2>
               <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
                 @for (swatch of brandSwatches(); track swatch.cssVar) {
-                  <app-color-swatch [swatch]="swatch" layout="row" />
+                  <app-color-swatch
+                    [swatch]="swatch"
+                    [format]="colorFormat()"
+                    layout="row"
+                  />
                 }
               </div>
             </section>
@@ -117,7 +125,11 @@ type Panel = (typeof PANELS)[number];
                 </h2>
                 <div class="grid grid-cols-2 gap-2 lg:grid-cols-1" [moveStagger]="50">
                   @for (swatch of statusSwatches(); track swatch.cssVar) {
-                    <app-color-swatch [swatch]="swatch" layout="row" />
+                    <app-color-swatch
+                      [swatch]="swatch"
+                      [format]="colorFormat()"
+                      layout="row"
+                    />
                   }
                 </div>
               </section>
@@ -175,13 +187,18 @@ type Panel = (typeof PANELS)[number];
                     type="primary"
                     [scale]="primaryScale()"
                     [locked]="locked().primary"
+                    [format]="colorFormat()"
                     (updateActive)="updateActiveColor('primary', $event)"
                     (toggleLock)="toggleLock($event)"
                   />
                 } @else {
                   <div class="max-w-xl">
                     <h3 class="mb-2 text-sm font-semibold">Primary</h3>
-                    <app-color-swatch [swatch]="brandSwatches()[0]" layout="row" />
+                    <app-color-swatch
+                      [swatch]="brandSwatches()[0]"
+                      [format]="colorFormat()"
+                      layout="row"
+                    />
                   </div>
                 }
 
@@ -191,13 +208,18 @@ type Panel = (typeof PANELS)[number];
                     type="secondary"
                     [scale]="secondaryScale()"
                     [locked]="locked().secondary"
+                    [format]="colorFormat()"
                     (updateActive)="updateActiveColor('secondary', $event)"
                     (toggleLock)="toggleLock($event)"
                   />
                 } @else {
                   <div class="max-w-xl">
                     <h3 class="mb-2 text-sm font-semibold">Secondary</h3>
-                    <app-color-swatch [swatch]="brandSwatches()[1]" layout="row" />
+                    <app-color-swatch
+                      [swatch]="brandSwatches()[1]"
+                      [format]="colorFormat()"
+                      layout="row"
+                    />
                   </div>
                 }
               </div>
@@ -277,6 +299,7 @@ export default class Home {
   primaryScale = computed(() => this.colorService.theme().primary);
   secondaryScale = computed(() => this.colorService.theme().secondary);
   colorModes = computed(() => this.colorService.selectedColorModes());
+  colorFormat = computed(() => this.colorService.selectedColorValueFormat());
   locked = computed(() => this.colorService.locked());
   brandSwatches = computed(() => this.colorService.getBrandColorSwatches());
   statusSwatches = computed(() => this.colorService.getStatusColorSwatches());

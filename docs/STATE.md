@@ -20,12 +20,13 @@ Angular 21 + AnalogJS app that generates deterministic, accessible color palette
 - **Volt adapter** (`src/shared/volt.ts`): maps Palette Crafter themes to Volt UI's current semantic color tokens (`surface`, `muted`, `border`, `ring`, `input`, status aliases such as `danger` → `destructive`/`error`) without putting Volt concepts inside the core generator. ThemeFamily Volt export emits `:root` and `.dark` together.
 - **Contrast module** (`src/shared/contrast.ts`): audits the pairs the theme actually renders, composites semi-transparent tokens at their real opacity, and — when a check fails — suggests the scale shade that would pass.
 - **API** (`src/server/handlers/theme.ts`): `GET`/`POST`, CORS with a real `OPTIONS` preflight (204), `Cache-Control` that allows edge caching for seeded requests and forbids it for random ones, coherent 400s for every invalid parameter, `?format=` to get a rendered export directly and `?contrast=true` for the single-theme audit. `/api/v2/theme-family` and `/api/v3/theme-family` return a machine-to-machine contract with `contractVersion: 1`, `algorithm`, `themes.light`, `themes.dark`, and shared `meta`; `format=volt` returns complete Volt CSS for both modes.
-- **Playground** (`src/components/*`, `src/app/pages/(home).page.ts`): laid out as a tool, not a landing page — a sticky command bar (`command-bar.ts`) holds generate / brand color / mode / options plus provenance chips (seed, harmony, hue, algorithm, WCAG pass count); a sticky left rail shows the base, brand and status swatches; the right side is a panel switcher over Scales / Preview / Export / Accessibility. It now defaults to v3, while explicit old algorithm permalinks still load. Keyboard: `G` generate, `D` mode, `1`/`2` lock primary/secondary (ignored while typing).
+- **Playground** (`src/components/*`, `src/app/pages/(home).page.ts`): laid out as a tool, not a landing page — a sticky command bar (`command-bar.ts`) holds generate / brand color / mode / options plus provenance chips (seed, harmony, hue, algorithm, WCAG pass count); a sticky left rail shows the base, brand and status swatches; the right side is a panel switcher over Scales / Preview / Export / Accessibility. It now defaults to v3, while explicit old algorithm permalinks still load. Options can switch visible/copy color notation between HEX, RGB and OKLab. Keyboard: `G` generate, `D` mode, `1`/`2` lock primary/secondary (ignored while typing).
+- **Accessibility repair** (`ColorPalette.repairAccessibilityFailures` + `contrast-report.ts`): opt-in button shown when the contrast report has failures. It applies only checks that already have deterministic suggestions, currently primary-as-link shade promotion and border/input opacity strengthening from the generated foreground/background.
 - **Client state** (`src/services/color-palette.ts`, signals, `providedIn: root`): generates **in-process** from the shared generator — parity comes from the shared function, not from HTTP. Only calls the API when `THEME_API_BASE_URL` points at a remote instance, and then via GET.
 - **SSR + hydration**: zoneless, `provideClientHydration(withEventReplay())`, `/` prerendered. CSS variables are written on the server too, so **the prerendered document already carries the palette** (193 custom properties on `<html>`) — no flash of default colors.
 - **UI libraries**: `@voltui/components@0.6.0` for every base component and `angular-movement@0.5.0` for every animation, both by the same author and consumed here on purpose as a real integration test — see [LIB-FINDINGS.md](./LIB-FINDINGS.md).
 - **Theme reveal** (`src/services/theme-reveal.ts`): the circular wipe on generate/mode-switch. Paints the overlay with the _incoming_ color, expands a clip-path circle from the click point to the furthest viewport corner, commits the palette while covered, then uncovers. Driven by `MoveTrigger.play()` promises, not `setTimeout`.
-- **Tests**: 150 across 11 files. `pnpm test`.
+- **Tests**: 154 across 11 files. `pnpm test`.
 - **Deploy**: Cloudflare Pages via Wrangler. `pnpm build:cf` → `pnpm deploy:cf`, plus a GitHub Action on push to `main`. Output dir is `dist/analog/public`. The Action passes `gitHubToken` to `wrangler-action` (with `deployments: write`) so each Cloudflare deploy registers a GitHub Deployment and shows in the repo's Deployments/Environments sidebar — but only once the deploy actually runs (see the missing-secrets note below).
 
 ## What's missing / broken (don't assume it works)
@@ -54,7 +55,7 @@ Actual flow: user interacts → `ColorPalette` calls `generateTheme` in-process 
 ## Testing
 
 ```bash
-pnpm test          # 150 tests
+pnpm test          # 154 tests
 pnpm test:watch
 ```
 
@@ -74,3 +75,4 @@ pnpm build:cf && pnpm dev:cf   # preview with the Cloudflare Pages preset
 - [CONVENTIONS.md](./CONVENTIONS.md) — concrete rules of this repo.
 - [specs/done/v2-algorithm-and-tooling.md](./specs/done/v2-algorithm-and-tooling.md) — why v2 exists and what was deliberately left alone.
 - [specs/done/v3-adaptive-semantics.md](./specs/done/v3-adaptive-semantics.md) — current adaptive semantic status colors.
+- [specs/done/a11y-repair-and-color-format.md](./specs/done/a11y-repair-and-color-format.md) — color code notation switcher and opt-in a11y repair.

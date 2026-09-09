@@ -66,6 +66,10 @@ export const wcagLevel = (ratio: number, bodyText: boolean): WcagLevel => {
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
+export interface ContrastReportOptions {
+  borderAlpha?: number;
+}
+
 /**
  * Finds the shade in `scale` closest to `DEFAULT` that clears `target` against
  * `background`.
@@ -123,6 +127,27 @@ const check = (
   };
 };
 
+const borderSuggestionFor = (
+  foreground: string,
+  background: string,
+): ContrastSuggestion | undefined => {
+  for (let alpha = 0.25; alpha <= 1.0001; alpha += 0.05) {
+    const hex = blend(foreground, background, alpha);
+    const ratio = calculateContrast(hex, background);
+
+    if (ratio >= AA_LARGE) {
+      return {
+        shade: "border",
+        hex,
+        ratio: round(ratio),
+        alpha: Math.round(alpha * 100) / 100,
+      };
+    }
+  }
+
+  return undefined;
+};
+
 const STATUS_LABELS: Record<StatusColorName, string> = {
   info: "Info",
   success: "Success",
@@ -137,7 +162,10 @@ const STATUS_LABELS: Record<StatusColorName, string> = {
 export const buildContrastReport = (
   theme: Theme,
   enabledStatus?: Partial<Record<StatusColorName, boolean>>,
+  options: ContrastReportOptions = {},
 ): ContrastReport => {
+  const borderAlpha = options.borderAlpha ?? 0.2;
+  const border = blend(theme.fg, theme.bg, borderAlpha);
   const checks: ContrastCheck[] = [
     check("Body text", theme.fg, theme.bg, true),
     check("Muted text", blend(theme.fg, theme.bg, 0.65), theme.bg, true),
@@ -160,8 +188,15 @@ export const buildContrastReport = (
       true,
       theme.primary,
     ),
-    check("Border", blend(theme.fg, theme.bg, 0.2), theme.bg, false),
   ];
+
+  const borderCheck = check("Border", border, theme.bg, false);
+  checks.push({
+    ...borderCheck,
+    ...(borderCheck.passes
+      ? {}
+      : { suggestion: borderSuggestionFor(theme.fg, theme.bg) }),
+  });
 
   if (theme.status) {
     for (const name of Object.keys(STATUS_LABELS) as StatusColorName[]) {

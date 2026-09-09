@@ -142,6 +142,41 @@ describe("brand color", () => {
   });
 });
 
+describe("color value format", () => {
+  it("defaults to HEX and can switch to RGB or OKLab", () => {
+    const service = create();
+
+    expect(service.selectedColorValueFormat()).toBe("hex");
+
+    service.setColorValueFormat("rgb");
+    expect(service.selectedColorValueFormat()).toBe("rgb");
+    expect(service.getBrandColorSwatches()[0].rgb).toMatch(/^rgb\(/);
+
+    service.setColorValueFormat("oklab");
+    expect(service.selectedColorValueFormat()).toBe("oklab");
+  });
+});
+
+describe("accessibility repair", () => {
+  it("repairs only suggested failures in the current contrast report", () => {
+    const service = create();
+    const before = service.contrastReport();
+    const primary = service.theme().primary;
+    const secondary = service.theme().secondary;
+
+    expect(before.failing).toBeGreaterThan(0);
+
+    const changed = service.repairAccessibilityFailures();
+    const after = service.contrastReport();
+
+    expect(changed).toBeGreaterThan(0);
+    expect(after.failing).toBeLessThan(before.failing);
+    expect(service.theme().primary).toEqual(primary);
+    expect(service.theme().secondary).toEqual(secondary);
+    expect(readVar("--border")).toContain("/");
+  });
+});
+
 describe("persistence and permalink", () => {
   it("survives a reload with the same palette", async () => {
     const first = create();

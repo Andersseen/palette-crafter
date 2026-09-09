@@ -11,6 +11,7 @@ import type {
   ColorScale,
   ColorSwatchType,
   ColorTokenMode,
+  ColorValueFormat,
   EnabledStatusColors,
   ExportFormat,
   HarmonyType,
@@ -50,6 +51,7 @@ const HOME_SEED = "palette-crafter-home";
 const CURRENT_ALGORITHM: ThemeAlgorithm = "v3";
 
 const STORAGE_KEY = "palette-crafter:last-theme";
+const DEFAULT_BORDER_ALPHA = 0.2;
 
 @Injectable({ providedIn: "root" })
 export default class ColorPalette {
@@ -70,6 +72,8 @@ export default class ColorPalette {
     primary: "scale",
     secondary: "scale",
   });
+  private colorValueFormat = signal<ColorValueFormat>("hex");
+  private borderAlpha = signal(DEFAULT_BORDER_ALPHA);
   private statusColors = signal<EnabledStatusColors>({
     info: false,
     success: false,
@@ -90,6 +94,7 @@ export default class ColorPalette {
   isLoading = computed(() => this.loadingState());
   error = computed(() => this.errorState());
   selectedColorModes = computed(() => this.colorModes());
+  selectedColorValueFormat = computed(() => this.colorValueFormat());
   enabledStatusColors = computed(() => this.statusColors());
   locked = computed(() => this.lockedTokens());
   activeBrandColor = computed(() => this.brandColor());
@@ -97,7 +102,9 @@ export default class ColorPalette {
 
   /** Live WCAG audit of the pairs the theme actually renders. */
   contrastReport = computed(() =>
-    buildContrastReport(this.currentTheme(), this.statusColors()),
+    buildContrastReport(this.currentTheme(), this.statusColors(), {
+      borderAlpha: this.borderAlpha(),
+    }),
   );
 
   permalink = computed(() => {
@@ -302,6 +309,7 @@ export default class ColorPalette {
     this.currentMeta.set(result.meta);
     this.themeMode.set(result.meta.mode);
     this.brandColor.set(result.meta.baseColor ?? null);
+    this.borderAlpha.set(DEFAULT_BORDER_ALPHA);
     this.applyModeClass(result.meta.mode);
   }
 
@@ -407,8 +415,14 @@ export default class ColorPalette {
     );
     root.style.setProperty("--accent", `rgb(${hexToRgb(theme.fg)} / 0.1)`);
     root.style.setProperty("--accent-foreground", `rgb(${hexToRgb(theme.fg)})`);
-    root.style.setProperty("--border", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
-    root.style.setProperty("--input", `rgb(${hexToRgb(theme.fg)} / 0.2)`);
+    root.style.setProperty(
+      "--border",
+      `rgb(${hexToRgb(theme.fg)} / ${this.borderAlpha()})`,
+    );
+    root.style.setProperty(
+      "--input",
+      `rgb(${hexToRgb(theme.fg)} / ${this.borderAlpha()})`,
+    );
 
     const setScaleVars = (name: string, scale: ColorScale) => {
       root.style.setProperty(`--${name}`, hexToRgb(scale.DEFAULT));
@@ -461,6 +475,38 @@ export default class ColorPalette {
 
   setColorTokenMode(token: BrandToken, mode: ColorTokenMode): void {
     this.colorModes.update((current) => ({ ...current, [token]: mode }));
+  }
+
+  setColorValueFormat(format: ColorValueFormat): void {
+    this.colorValueFormat.set(format);
+  }
+
+  repairAccessibilityFailures(): number {
+    const report = this.contrastReport();
+    let changed = 0;
+
+    for (const check of report.checks) {
+      if (check.passes || !check.suggestion) {
+        continue;
+      }
+
+      if (check.label === "Primary as link text") {
+        this.updateActiveShade("primary", check.suggestion.hex);
+        changed += 1;
+        continue;
+      }
+
+      if (check.label === "Border" && check.suggestion.alpha !== undefined) {
+        this.borderAlpha.set(check.suggestion.alpha);
+        changed += 1;
+      }
+    }
+
+    if (changed > 0) {
+      this.updateCSSVariables();
+    }
+
+    return changed;
   }
 
   setStatusColorEnabled(name: StatusColorName, enabled: boolean): void {
@@ -530,6 +576,7 @@ export default class ColorPalette {
       hex,
       hsl: this.formatHSL(hexToHsl(hex)),
       oklab: this.formatOklab(hexToOklab(hex)),
+      rgb: `rgb(${hexToRgb(hex)})`,
       cssVar,
     };
   }

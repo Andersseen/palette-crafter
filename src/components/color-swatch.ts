@@ -1,7 +1,8 @@
-import { Component, input } from "@angular/core";
+import { Component, computed, input } from "@angular/core";
 import { VoltCard, VoltCardContent } from "@voltui/components";
 import { MOVEMENT_DIRECTIVES } from "angular-movement";
-import type { ColorSwatchType } from "@shared/types";
+import type { ColorSwatchType, ColorValueFormat } from "@shared/types";
+import { formatColorValue } from "@shared/utils";
 
 @Component({
   selector: "app-color-swatch",
@@ -17,7 +18,7 @@ import type { ColorSwatchType } from "@shared/types";
       [moveWhileTap]="{ scale: [1, 0.95] }"
       [moveDuration]="180"
       [attr.aria-label]="
-        'Copy ' + swatch().name + ' color ' + swatch().hex.toUpperCase()
+        'Copy ' + swatch().name + ' color ' + displayValue()
       "
       (click)="copyToClipboard()"
     >
@@ -40,7 +41,7 @@ import type { ColorSwatchType } from "@shared/types";
           <div class="min-w-0 flex-1">
             <h4 class="truncate text-xs font-medium">{{ swatch().name }}</h4>
             <p class="truncate font-mono text-[11px] tabular-nums opacity-60">
-              {{ copied ? "Copied!" : swatch().hex.toUpperCase() }}
+              {{ copied ? "Copied!" : displayValue() }}
             </p>
           </div>
 
@@ -73,13 +74,7 @@ import type { ColorSwatchType } from "@shared/types";
               {{ swatch().name }}
             </h4>
             <div class="space-y-1 text-[10px] sm:text-xs opacity-70">
-              <p class="font-mono">{{ swatch().hex.toUpperCase() }}</p>
-              <p class="hidden font-mono truncate sm:block">
-                {{ swatch().hsl }}
-              </p>
-              <p class="hidden font-mono truncate md:block">
-                {{ swatch().oklab }}
-              </p>
+              <p class="font-mono truncate">{{ displayValue() }}</p>
               <p class="font-mono truncate">{{ swatch().cssVar }}</p>
             </div>
           </div>
@@ -100,11 +95,16 @@ import type { ColorSwatchType } from "@shared/types";
 export default class ColorSwatch {
   swatch = input.required<ColorSwatchType>();
   layout = input<"card" | "row">("card");
+  format = input<ColorValueFormat>("hex");
   copied = false;
+
+  displayValue = computed(() =>
+    formatColorValue(this.swatch().hex, this.format()),
+  );
 
   async copyToClipboard(): Promise<void> {
     try {
-      await navigator.clipboard.writeText(this.swatch().hex);
+      await navigator.clipboard.writeText(this.displayValue());
       this.copied = true;
       setTimeout(() => {
         this.copied = false;

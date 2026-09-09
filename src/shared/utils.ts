@@ -1,4 +1,10 @@
-import type { ColorScale, HSLColor, OklabColor, OklchColor } from "./types";
+import type {
+  ColorScale,
+  ColorValueFormat,
+  HSLColor,
+  OklabColor,
+  OklchColor,
+} from "./types";
 
 export const hexToRgb = (hex: string) => {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -120,6 +126,25 @@ export const oklabDistance = (a: string, b: string): number => {
   const db = first.b - second.b;
 
   return Math.sqrt(dl * dl + da * da + db * db);
+};
+
+export const formatColorValue = (
+  hex: string,
+  format: ColorValueFormat,
+): string => {
+  switch (format) {
+    case "rgb":
+      return `rgb(${hexToRgb(hex)})`;
+    case "oklab": {
+      const oklab = hexToOklab(hex);
+      return `oklab(${oklab.l.toFixed(3)} ${oklab.a.toFixed(
+        3,
+      )} ${oklab.b.toFixed(3)})`;
+    }
+    case "hex":
+    default:
+      return hex.toUpperCase();
+  }
 };
 
 /**

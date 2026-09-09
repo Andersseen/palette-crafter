@@ -1,12 +1,11 @@
 import { Component, computed, input, output } from "@angular/core";
 import { VoltButton } from "@voltui/components";
 import { MOVEMENT_DIRECTIVES } from "angular-movement";
-import type { BrandToken, ColorScale } from "@shared/types";
+import type { BrandToken, ColorScale, ColorValueFormat } from "@shared/types";
 import {
   bestForeground,
   calculateContrast,
-  hexToHsl,
-  hexToOklab,
+  formatColorValue,
 } from "@shared/utils";
 
 @Component({
@@ -21,7 +20,7 @@ import {
             class="font-mono text-xs uppercase tabular-nums opacity-60"
             [title]="'Active shade — click a swatch to change it'"
           >
-            {{ scale().DEFAULT }}
+            {{ displayColor(scale().DEFAULT) }}
           </span>
           <span class="hidden text-[11px] opacity-40 sm:inline">
             {{ activeShade() ? "shade " + activeShade() : "custom" }}
@@ -96,7 +95,7 @@ import {
             [style.background-color]="item.value"
             [style.color]="item.foreground"
             [attr.aria-label]="
-              'Set ' + name() + ' to shade ' + item.key + ', ' + item.value
+              'Set ' + name() + ' to shade ' + item.key + ', ' + item.display
             "
             [attr.aria-pressed]="item.value === scale().DEFAULT"
             (click)="handleCardClick(item.value)"
@@ -108,26 +107,10 @@ import {
             <span class="mt-auto flex flex-col gap-0.5 lg:gap-1">
               <span
                 class="hidden truncate font-mono text-[10px] opacity-70 sm:block"
-                (click)="copyToClipboard(item.value, $event)"
-                title="Copy HEX"
+                (click)="copyToClipboard(item.display, $event)"
+                [title]="'Copy ' + format().toUpperCase()"
               >
-                {{ item.value.toUpperCase() }}
-              </span>
-
-              <span
-                class="hidden truncate font-mono text-[10px] opacity-60 hover:opacity-100 xl:block"
-                (click)="copyToClipboard(item.hsl, $event)"
-                title="Copy HSL"
-              >
-                {{ item.hsl }}
-              </span>
-
-              <span
-                class="hidden truncate font-mono text-[10px] opacity-60 hover:opacity-100 xl:block"
-                (click)="copyToClipboard(item.oklab, $event)"
-                title="Copy Oklab"
-              >
-                {{ item.oklab }}
+                {{ item.display }}
               </span>
             </span>
 
@@ -161,6 +144,7 @@ export default class ColorScaleComponent {
   scale = input.required<ColorScale>();
   type = input.required<BrandToken>();
   locked = input(false);
+  format = input<ColorValueFormat>("hex");
 
   updateActive = output<string>();
   toggleLock = output<BrandToken>();
@@ -185,8 +169,6 @@ export default class ColorScaleComponent {
 
     return keys.map((key) => {
       const hex = scale[key];
-      const hsl = hexToHsl(hex);
-      const oklab = hexToOklab(hex);
 
       return {
         key,
@@ -195,13 +177,14 @@ export default class ColorScaleComponent {
         // whenever white missed 4.5:1, even when black was the worse of the two.
         foreground: bestForeground(hex),
         contrast: Math.round(calculateContrast(hex, bestForeground(hex)) * 10) / 10,
-        hsl: `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
-        oklab: `oklab(${oklab.l.toFixed(3)} ${oklab.a.toFixed(
-          3,
-        )} ${oklab.b.toFixed(3)})`,
+        display: this.displayColor(hex),
       };
     });
   });
+
+  displayColor(hex: string): string {
+    return formatColorValue(hex, this.format());
+  }
 
   handleCardClick(hex: string): void {
     this.updateActive.emit(hex);

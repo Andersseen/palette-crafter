@@ -37,3 +37,4 @@ When in doubt, write the spec — it's cheaper than a half-done change that has 
 - `done/v2-algorithm-and-tooling.md` — v2 algorithm, exports, contrast audit, and tests.
 - `done/theme-family-volt-api.md` — ThemeFamily generation, Volt export, and `/api/v2/theme-family`.
 - `done/v3-adaptive-semantics.md` — v3 adaptive semantic status colors and `/api/v3/*` routes.
+- `done/a11y-repair-and-color-format.md` — display format switching and opt-in accessibility repair.

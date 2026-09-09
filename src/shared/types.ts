@@ -45,11 +45,13 @@ export interface ColorSwatchType {
   hex: string;
   hsl: string;
   oklab: string;
+  rgb: string;
   cssVar: string;
 }
 
 export type ThemeMode = "light" | "dark";
 export type ColorTokenMode = "single" | "scale";
+export type ColorValueFormat = "hex" | "rgb" | "oklab";
 export type StatusColorName = "info" | "success" | "warning" | "danger";
 
 export type StatusColorScales = Record<StatusColorName, ColorScale>;
@@ -181,6 +183,7 @@ export interface ContrastSuggestion {
   shade: string;
   hex: string;
   ratio: number;
+  alpha?: number;
 }
 
 export interface ContrastCheck {

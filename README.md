@@ -34,6 +34,8 @@ Both run the exact same generator, so a palette is identical whether you click f
 - 🧭 **Adaptive status colors** — info, success, warning and danger follow the brand palette while staying recognizable.
 - 🎨 **Your brand hex, preserved exactly** — pass `baseColor` and your real color appears verbatim in the scale.
 - ♿ **WCAG-audited, not assumed** — every pair the theme actually renders is measured and graded AA/AAA.
+- 🛠️ **Opt-in a11y repair** — failed checks with safe suggestions can be fixed without rerolling the palette.
+- 🔎 **HEX, RGB or OKLab display** — inspect and copy the palette in the notation you need.
 - 📦 **Seven export formats** — Tailwind v4, CSS variables, SCSS, JSON, shadcn/ui, Volt UI, and W3C Design Tokens.
 - ⚡ **Edge-cacheable API** — `GET`/`POST`, CORS-enabled, deployed on Cloudflare Pages.
 - 🌗 **Light & dark** — both modes generated from the same intent, each contrast-checked on its own.
